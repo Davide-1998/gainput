@@ -6,8 +6,8 @@
 #if defined(GAINPUT_PLATFORM_LINUX)
 #include <time.h>
 #include <X11/Xlib.h>
-#include "keyboard/GainputInputDeviceKeyboardLinux.h"
-#include "mouse/GainputInputDeviceMouseLinux.h"
+#include "keyboard/GainputInputDeviceKeyboardX11.h"
+#include "mouse/GainputInputDeviceMouseX11.h"
 #elif defined(GAINPUT_PLATFORM_WIN)
 #include "keyboard/GainputInputDeviceKeyboardWin.h"
 #include "keyboard/GainputInputDeviceKeyboardWinRaw.h"
@@ -322,7 +322,7 @@ InputManager::HandleEvent(XEvent& event)
 			&& it->second->GetVariant() == InputDevice::DV_STANDARD)
 		{
 			InputDeviceKeyboard* keyboard = static_cast<InputDeviceKeyboard*>(it->second);
-			InputDeviceKeyboardImplLinux* keyboardImpl = static_cast<InputDeviceKeyboardImplLinux*>(keyboard->GetPimpl());
+			InputDeviceKeyboardImplX11* keyboardImpl = static_cast<InputDeviceKeyboardImplX11*>(keyboard->GetPimpl());
 			GAINPUT_ASSERT(keyboardImpl);
 			keyboardImpl->HandleEvent(event);
 		}
@@ -330,7 +330,7 @@ InputManager::HandleEvent(XEvent& event)
 			&& it->second->GetVariant() == InputDevice::DV_STANDARD)
 		{
 			InputDeviceMouse* mouse = static_cast<InputDeviceMouse*>(it->second);
-			InputDeviceMouseImplLinux* mouseImpl = static_cast<InputDeviceMouseImplLinux*>(mouse->GetPimpl());
+			InputDeviceMouseImplX11* mouseImpl = static_cast<InputDeviceMouseImplX11*>(mouse->GetPimpl());
 			GAINPUT_ASSERT(mouseImpl);
 			mouseImpl->HandleEvent(event);
 		}

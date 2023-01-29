@@ -1,13 +1,26 @@
-cmake_minimum_required(VERSION 2.8)
-set(GAINPUT_MAJOR_VERSION 1)
+cmake_minimum_required(VERSION 3.16.0)
+
+project(gainput)
+
+set(GAINPUT_MAJOR_VERSION 2)
 set(GAINPUT_MINOR_VERSION 0)
 set(GAINPUT_PATCH_VERSION 0)
 set(GAINPUT_VERSION ${GAINPUT_MAJOR_VERSION}.${GAINPUT_MINOR_VERSION}.${GAINPUT_PATCH_VERSION})
 
 option(GAINPUT_SAMPLES "Build Samples for Gainput" ON)
 option(GAINPUT_TESTS "Build Tests for Gainput" ON)
-option(GAINPUT_BUILD_SHARED "BUILD_SHARED" ON)
-option(GAINPUT_BUILD_STATIC "BUILD_STATIC" ON)
+option(GAINPUT_BUILD_SHARED "Build a shared library" ON)
+option(GAINPUT_BUILD_STATIC "Build a static library" ON)
+
+# Dumb options
+set(_DUMB_VARS "GAINPUT_SAMPLES;GAINPUT_TESTS;GAINPUT_BUILD_SHARED;GAINPUT_BUILD_STATIC")
+
+message(STATUS "The following options have been set:")
+foreach(_VAR ${_DUMB_VARS})
+    message(STATUS "${_VAR}: ${${_VAR}}")
+endforeach()
+message("")
+
 
 if(!WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")

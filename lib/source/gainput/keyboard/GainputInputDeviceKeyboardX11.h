@@ -12,10 +12,10 @@
 namespace gainput
 {
 
-class InputDeviceKeyboardImplLinux : public InputDeviceKeyboardImpl
+class InputDeviceKeyboardImplX11 : public InputDeviceKeyboardImpl
 {
 public:
-	InputDeviceKeyboardImplLinux(InputManager& manager, InputDevice& device, InputState& state, InputState& previousState) :
+	InputDeviceKeyboardImplX11(InputManager& manager, InputDevice& device, InputState& state, InputState& previousState) :
 		manager_(manager),
 		device_(device),
 		textInputEnabled_(true),

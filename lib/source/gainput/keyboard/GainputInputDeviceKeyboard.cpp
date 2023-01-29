@@ -9,7 +9,7 @@
 #include <gainput/GainputLog.h>
 
 #if defined(GAINPUT_PLATFORM_LINUX)
-	#include "GainputInputDeviceKeyboardLinux.h"
+	#include "GainputInputDeviceKeyboardX11.h"
 	#include "GainputInputDeviceKeyboardEvdev.h"
 #elif defined(GAINPUT_PLATFORM_WIN)
 	#include "GainputInputDeviceKeyboardWin.h"
@@ -39,7 +39,7 @@ InputDeviceKeyboard::InputDeviceKeyboard(InputManager& manager, DeviceId device,
 #if defined(GAINPUT_PLATFORM_LINUX)
 	if (variant == DV_STANDARD)
 	{
-		impl_ = manager.GetAllocator().New<InputDeviceKeyboardImplLinux>(manager, *this, *state_, *previousState_);
+		impl_ = manager.GetAllocator().New<InputDeviceKeyboardImplX11>(manager, *this, *state_, *previousState_);
 	}
 	else if (variant == DV_RAW)
 	{

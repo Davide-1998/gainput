@@ -10,10 +10,10 @@
 namespace gainput
 {
 
-class InputDeviceMouseImplLinux : public InputDeviceMouseImpl
+class InputDeviceMouseImplX11 : public InputDeviceMouseImpl
 {
 public:
-	InputDeviceMouseImplLinux(InputManager& manager, InputDevice& device, InputState& state, InputState& previousState) :
+	InputDeviceMouseImplX11(InputManager& manager, InputDevice& device, InputState& state, InputState& previousState) :
 		manager_(manager),
 		device_(device),
 		state_(&state),
@@ -29,7 +29,7 @@ public:
 		GAINPUT_ASSERT(pressedThisFrame_);
 	}
 
-	~InputDeviceMouseImplLinux()
+	~InputDeviceMouseImplX11()
 	{
 		manager_.GetAllocator().Deallocate(isWheel_);
 		manager_.GetAllocator().Deallocate(pressedThisFrame_);
