@@ -140,9 +140,7 @@ elseif ("${GAINPUT_TARGET_PLATFORM}" MATCHES "Linux")
 	set(${PROJECT_NAME}_DEFINES ${GAINPUT_DEFINES} GAINPUT_PLATFORM_LINUX)
 
   if (GAINPUT_ENABLE_HID)
-    find_package(udev REQUIRED)
-    target_include_directories(${PROJECT_NAME} PUBLIC ${UDEV_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${UDEV_LIBRARY} HIDAPI::hidapi)
+    target_link_libraries(${PROJECT_NAME} PUBLIC HIDAPI::hidapi)
   endif ()
 
 elseif ("${GAINPUT_TARGET_PLATFORM}" MATCHES "NX64")
