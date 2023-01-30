@@ -8,14 +8,55 @@
 #ifndef GAINPUT_H_
 #define GAINPUT_H_
 
-#if defined(__ANDROID__) || defined(ANDROID)
-	#define GAINPUT_PLATFORM_ANDROID
+#if !defined(GAINPUT_CMAKE)
+	#if defined(__ANDROID__) || defined(ANDROID)
+		#if defined(QUEST_VR)
+			#define GAINPUT_PLATFORM_QUEST
+		#else
+			#define GAINPUT_PLATFORM_ANDROID
+		#endif
+		#define GAINPUT_LIBEXPORT
+	#elif defined(__linux) || defined(__linux__) || defined(linux) || defined(LINUX)
+		#define GAINPUT_PLATFORM_LINUX
+		#define GAINPUT_LIBEXPORT
+	#elif defined(_WIN32) || defined(__WIN32__) || (defined(_MSC_VER) && !defined(NX64))
+		#define GAINPUT_PLATFORM_WIN
+		#if defined(GAINPUT_LIB_DYNAMIC)
+			#define GAINPUT_LIBEXPORT		__declspec(dllexport)
+		#elif defined(GAINPUT_LIB_DYNAMIC_USE)
+			#define GAINPUT_LIBEXPORT		__declspec(dllimport)
+		#else
+			#define GAINPUT_LIBEXPORT
+		#endif
+	#elif defined(__APPLE__)
+		#define GAINPUT_LIBEXPORT
+		#include <TargetConditionals.h>
+		#if TARGET_OS_TV
+			#define GAINPUT_PLATFORM_TVOS
+		#elif TARGET_OS_IPHONE
+			#define GAINPUT_PLATFORM_IOS
+			//if this is enabled then we have linked with CoreHaptics
+			#if defined(ENABLE_FORGE_IOS_HAPTICS)
+				#define GAINPUT_IOS_HAPTICS
+			#endif
+		#elif TARGET_OS_MAC
+			#define GAINPUT_PLATFORM_MAC
+		#else
+			#error Gainput: Unknown/unsupported Apple platform!
+		#endif
+	#elif defined(NX64)
+		#define GAINPUT_PLATFORM_NX64
+		#define GAINPUT_LIBEXPORT
+	#elif defined(ORBIS)
+		#define GAINPUT_PLATFORM_ORBIS
+		#define GAINPUT_LIBEXPORT
+	#elif defined(PROSPERO)
+	#define GAINPUT_PLATFORM_PROSPERO
 	#define GAINPUT_LIBEXPORT
-#elif defined(__linux) || defined(__linux__) || defined(linux) || defined(LINUX)
-	#define GAINPUT_PLATFORM_LINUX
-	#define GAINPUT_LIBEXPORT
-#elif defined(_WIN32) || defined(__WIN32__) || defined(_MSC_VER)
-	#define GAINPUT_PLATFORM_WIN
+	#else
+		#error Gainput: Unknown/unsupported platform!
+	#endif
+#else // !defined(GAINPUT_CMAKE)
 	#if defined(GAINPUT_LIB_DYNAMIC)
 		#define GAINPUT_LIBEXPORT		__declspec(dllexport)
 	#elif defined(GAINPUT_LIB_DYNAMIC_USE)
@@ -23,22 +64,7 @@
 	#else
 		#define GAINPUT_LIBEXPORT
 	#endif
-#elif defined(__APPLE__)
-	#define GAINPUT_LIBEXPORT
-	#include <TargetConditionals.h>
-    #if TARGET_OS_TV
-        #define GAINPUT_PLATFORM_TVOS
-	#elif TARGET_OS_IPHONE
-		#define GAINPUT_PLATFORM_IOS
-	#elif TARGET_OS_MAC
-		#define GAINPUT_PLATFORM_MAC
-	#else
-		#error Gainput: Unknown/unsupported Apple platform!
-	#endif
-#else
-	#error Gainput: Unknown/unsupported platform!
-#endif
-
+#endif // !defined(GAINPUT_CMAKE)
 
 //#define GAINPUT_DEBUG
 //#define GAINPUT_DEV
@@ -64,13 +90,28 @@
 #include <cstring>
 #include <new>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+	#define GAINPUT_COMPILE_ASSERT(exp) _STATIC_ASSERT(exp) 
+#elif defined(__clang__)
+	#define GAINPUT_COMPILE_ASSERT(exp) _Static_assert(exp, #exp)
+#elif defined(__GNUC__)
+		// GCC
+	#define GAINPUT_STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(!!(COND))*2-1]
+	// token pasting madness:
+	#define GAINPUT_COMPILE_ASSERT3(X,L) GAINPUT_STATIC_ASSERT(X,static_assertion_at_line_##L)
+	#define GAINPUT_COMPILE_ASSERT2(X,L) GAINPUT_COMPILE_ASSERT3(X,L)
+	#define GAINPUT_COMPILE_ASSERT(X)    GAINPUT_COMPILE_ASSERT2(X,__LINE__)
+#else
+	#error "Unknown compiler"
+#endif
+
 #define GAINPUT_ASSERT assert
 #define GAINPUT_UNUSED(x) (void)(x)
 
-#if defined(GAINPUT_PLATFORM_LINUX)
+#if defined(GAINPUT_PLATFORM_LINUX) || defined(GAINPUT_PLATFORM_GGP)
 
-#include <cstdlib>
 #include <stdint.h>
+#include <stdlib.h>
 
 union _XEvent;
 typedef _XEvent XEvent;
@@ -95,9 +136,23 @@ namespace gainput
 #include <stdlib.h>
 struct AInputEvent;
 
+#elif defined(GAINPUT_PLATFORM_QUEST)
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#elif defined(GAINPUT_PLATFORM_NX64) || defined(GAINPUT_PLATFORM_ORBIS) || defined(GAINPUT_PLATFORM_PROSPERO)
+
+#include <cstdlib>
+#include <stdint.h>
+
 #endif
 
-
+#ifndef GAINPUT_MALLOC
+	#define GAINPUT_MALLOC(sz) 		malloc(sz)
+	#define GAINPUT_FREE(p) 		free(p)
+	#define GAINPUT_CALLOC(n, sz)	calloc(n, sz)
+#endif // GAINPUT_MALLOC
 
 /// Contains all Gainput related classes, types, and functions.
 namespace gainput
@@ -162,32 +217,33 @@ template <class T> T Abs(T a) { return a < T() ? -a : a; }
  * http://gainput.johanneskuhlmann.de/html5client/
  */
 void DevSetHttp(bool enable);
-}
+
+} // namespace gainput
 
 #define GAINPUT_VER_MAJOR_SHIFT		16
 #define GAINPUT_VER_GET_MAJOR(ver)	(ver >> GAINPUT_VER_MAJOR_SHIFT)
 #define GAINPUT_VER_GET_MINOR(ver)	(ver & (uint32_t(-1) >> GAINPUT_VER_MAJOR_SHIFT))
 
 
-#include <gainput/GainputAllocator.h>
-#include <gainput/GainputContainers.h>
-#include <gainput/GainputInputState.h>
-#include <gainput/GainputInputDevice.h>
-#include <gainput/GainputInputListener.h>
-#include <gainput/GainputInputManager.h>
-#include <gainput/GainputInputMap.h>
+#include "GainputAllocator.h"
+#include "GainputContainers.h"
+#include "GainputInputState.h"
+#include "GainputInputDevice.h"
+#include "GainputInputListener.h"
+#include "GainputInputManager.h"
+#include "GainputInputMap.h"
 
-#include <gainput/GainputInputDeviceMouse.h>
-#include <gainput/GainputInputDeviceKeyboard.h>
-#include <gainput/GainputInputDevicePad.h>
-#include <gainput/GainputInputDeviceTouch.h>
-#include <gainput/GainputInputDeviceBuiltIn.h>
+#include "GainputInputDeviceMouse.h"
+#include "GainputInputDeviceKeyboard.h"
+#include "GainputInputDevicePad.h"
+#include "GainputInputDeviceTouch.h"
+#include "GainputInputDeviceBuiltIn.h"
 
-#include <gainput/gestures/GainputGestures.h>
+#include "gestures/GainputGestures.h"
 
-#include <gainput/recorder/GainputInputRecording.h>
-#include <gainput/recorder/GainputInputPlayer.h>
-#include <gainput/recorder/GainputInputRecorder.h>
+#include "recorder/GainputInputRecording.h"
+#include "recorder/GainputInputPlayer.h"
+#include "recorder/GainputInputRecorder.h"
 
 #endif
 

@@ -1,5 +1,5 @@
 
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 #include "dev/GainputDev.h"
 
 #include <stdlib.h>
@@ -44,6 +44,29 @@ public:
 };
 
 
+InputMap::InputMap(InputManager* manager, const char* name, Allocator& allocator) :
+	manager_(*manager),
+	name_(0),
+	allocator_(allocator),
+	userButtons_(allocator_),
+	nextUserButtonId_(0),
+	listeners_(allocator_),
+	sortedListeners_(allocator_),
+	nextListenerId_(0),
+	managerListener_(0)
+{
+	static unsigned nextId = 0;
+	id_ = nextId++;
+
+	if (name)
+	{
+		uint32_t nameSize = (uint32_t)strlen(name) + 1;
+		name_ = static_cast<char*>(allocator_.Allocate(nameSize));
+		strncpy(name_, name, nameSize);
+	}
+	GAINPUT_DEV_NEW_MAP(this);
+}
+
 InputMap::InputMap(InputManager& manager, const char* name, Allocator& allocator) :
 	manager_(manager),
 	name_(0),
@@ -60,8 +83,9 @@ InputMap::InputMap(InputManager& manager, const char* name, Allocator& allocator
 
 	if (name)
 	{
-		name_ = static_cast<char*>(allocator_.Allocate(strlen(name) + 1));
-		strcpy(name_, name);
+		uint32_t nameSize =(uint32_t)strlen(name) + 1;
+		name_ = static_cast<char*>(allocator_.Allocate(nameSize));
+		strncpy(name_, name, nameSize);
 	}
 	GAINPUT_DEV_NEW_MAP(this);
 }
@@ -399,15 +423,15 @@ InputMap::GetUserButtonName(UserButtonId userButton, char* buffer, size_t buffer
 {
 	const UserButton* ub = GetUserButton(userButton);
 	GAINPUT_ASSERT(ub);
-	for (MappedInputList::const_iterator it = ub->inputs.begin();
-			it != ub->inputs.end();
-			++it)
-	{
-		const MappedInput& mi = *it;
-		const InputDevice* device = manager_.GetDevice(mi.device);
-		GAINPUT_ASSERT(device);
-		return device->GetButtonName(mi.deviceButton, buffer, bufferLength);
-	}
+    MappedInputList::const_iterator it = ub->inputs.begin();
+    if(it != ub->inputs.end())
+    {
+        const MappedInput& mi = *it;
+        const InputDevice* device = manager_.GetDevice(mi.device);
+        GAINPUT_ASSERT(device);
+        return device->GetButtonName(mi.deviceButton, buffer, bufferLength);
+    }
+    
 	return 0;
 }
 
@@ -462,7 +486,7 @@ public:
 		return true;
 	}
 
-	bool OnDeviceButtonFloat(DeviceId device, DeviceButtonId deviceButton, float oldValue, float newValue)
+	bool OnDeviceButtonFloat(float /*deltaTime*/, DeviceId device, DeviceButtonId deviceButton, float oldValue, float newValue)
 	{
 		const UserButtonId userButton = inputMap_.GetUserButtonId(device, deviceButton);
 		if (userButton == InvalidUserButtonId)

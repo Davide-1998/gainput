@@ -175,12 +175,12 @@ class GAINPUT_LIBEXPORT DefaultAllocator : public Allocator
 public:
 	void* Allocate(size_t size, size_t /*align*/)
 	{
-		return malloc(size);
+		return GAINPUT_MALLOC(size);
 	}
 
 	void Deallocate(void* ptr)
 	{
-		free(ptr);
+		GAINPUT_FREE(ptr);
 	}
 };
 

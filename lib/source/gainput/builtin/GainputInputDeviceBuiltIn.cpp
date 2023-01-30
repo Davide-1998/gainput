@@ -1,11 +1,11 @@
 
-#include <gainput/gainput.h>
-#include <gainput/GainputDebugRenderer.h>
+#include "gainput/gainput.h"
+#include "gainput/GainputDebugRenderer.h"
 
 #include "GainputInputDeviceBuiltInImpl.h"
-#include <gainput/GainputInputDeltaState.h>
-#include <gainput/GainputHelpers.h>
-#include <gainput/GainputLog.h>
+#include "gainput/GainputInputDeltaState.h"
+#include "gainput/GainputHelpers.h"
+#include "gainput/GainputLog.h"
 
 #if defined(GAINPUT_PLATFORM_ANDROID)
 	#include "GainputInputDeviceBuiltInAndroid.h"
@@ -114,9 +114,15 @@ InputDeviceBuiltIn::GetButtonName(DeviceButtonId deviceButton, char* buffer, siz
 {
 	GAINPUT_ASSERT(IsValidButtonId(deviceButton));
 	GAINPUT_ASSERT(buffer);
-	GAINPUT_ASSERT(bufferLength > 0);
-	strncpy(buffer, deviceButtonInfos[deviceButton].name, bufferLength);
-	buffer[bufferLength-1] = 0;
+    if (bufferLength > 0)
+    {
+        strncpy(buffer, deviceButtonInfos[deviceButton].name, bufferLength-1);
+        buffer[bufferLength-1] = 0;
+    }
+    else
+    {
+        GAINPUT_ASSERT(!"bufferLength <= 0");
+    }
 	const size_t nameLen = strlen(deviceButtonInfos[deviceButton].name);
 	return nameLen >= bufferLength ? bufferLength : nameLen+1;
 }

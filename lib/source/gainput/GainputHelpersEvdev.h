@@ -7,16 +7,17 @@
 #include <errno.h>
 #include <linux/uinput.h>
 
-#include <gainput/GainputLog.h>
+#include "gainput/GainputLog.h"
 
 namespace gainput
 {
 namespace
 {
 
-static const unsigned EvdevDeviceCount = 10;
+static const unsigned EvdevDeviceCount = 11;
 static const char* EvdevDeviceIds[EvdevDeviceCount] =
 {
+	"/dev/input/mice",
 	"/dev/input/event0",
 	"/dev/input/event1",
 	"/dev/input/event2",

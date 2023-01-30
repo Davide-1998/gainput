@@ -5,7 +5,7 @@
 #include <X11/Xlib.h>
 
 #include "GainputInputDeviceMouseImpl.h"
-#include <gainput/GainputHelpers.h>
+#include "gainput/GainputHelpers.h"
 
 namespace gainput
 {
@@ -35,12 +35,16 @@ public:
 		manager_.GetAllocator().Deallocate(pressedThisFrame_);
 	}
 
-	InputDevice::DeviceVariant GetVariant() const
+	InputDevice::DeviceVariant GetVariant() const override
 	{
 		return InputDevice::DV_STANDARD;
 	}
 
-	void Update(InputDeltaState* delta)
+	virtual InputState * GetNextInputState() override {
+		return &nextState_;
+	}
+	
+	void Update(InputDeltaState* delta) override
 	{
 		delta_ = delta;
 
@@ -71,8 +75,8 @@ public:
 		case MotionNotify:
 			{
 				const XMotionEvent& motionEvent = event.xmotion;
-				const float x = float(motionEvent.x)/float(manager_.GetDisplayWidth());
-				const float y = float(motionEvent.y)/float(manager_.GetDisplayHeight());
+				const float x = float(motionEvent.x);
+				const float y = float(motionEvent.y);
 				HandleAxis(device_, nextState_, delta_, MouseAxisX, x);
 				HandleAxis(device_, nextState_, delta_, MouseAxisY, y);
 				break;

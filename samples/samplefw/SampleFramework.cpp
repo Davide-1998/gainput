@@ -98,6 +98,7 @@ bool SfwIsDone()
 
 void SfwSetInputManager(gainput::InputManager* manager)
 {
+	manager->Init(&xWindow);
 }
 
 Display* SfwGetXDisplay()
@@ -205,6 +206,7 @@ bool SfwIsDone()
 
 void SfwSetInputManager(gainput::InputManager* manager)
 {
+	manager->Init(&hWnd);
 }
 
 HWND SfwGetHWnd()

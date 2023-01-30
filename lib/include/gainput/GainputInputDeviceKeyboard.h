@@ -8,6 +8,7 @@ namespace gainput
 /// All valid device buttons for InputDeviceKeyboard.
 enum Key
 {
+	KeyInvalid =-1,
 	KeyEscape,
 	KeyF1,
 	KeyF2,
@@ -228,32 +229,32 @@ public:
 	~InputDeviceKeyboard();
 
 	/// Returns DT_KEYBOARD.
-	DeviceType GetType() const { return DT_KEYBOARD; }
-	DeviceVariant GetVariant() const;
-	const char* GetTypeName() const { return "keyboard"; }
-	bool IsValidButtonId(DeviceButtonId deviceButton) const { return deviceButton < KeyCount_; }
+	DeviceType GetType() const override{ return DT_KEYBOARD; }
+	DeviceVariant GetVariant() const override;
+	const char* GetTypeName() const override{ return "keyboard"; }
+	bool IsValidButtonId(DeviceButtonId deviceButton) const override { return deviceButton < KeyCount_; }
 
-	size_t GetAnyButtonDown(DeviceButtonSpec* outButtons, size_t maxButtonCount) const;
+	size_t GetAnyButtonDown(DeviceButtonSpec* outButtons, size_t maxButtonCount) const override;
 
-	size_t GetButtonName(DeviceButtonId deviceButton, char* buffer, size_t bufferLength) const;
-	ButtonType GetButtonType(DeviceButtonId deviceButton) const;
-	DeviceButtonId GetButtonByName(const char* name) const;
+	size_t GetButtonName(DeviceButtonId deviceButton, char* buffer, size_t bufferLength) const override;
+	ButtonType GetButtonType(DeviceButtonId deviceButton) const override;
+	DeviceButtonId GetButtonByName(const char* name) const override;
 
-	InputState* GetNextInputState();
-
+	InputState* GetNextInputState() override;
+	virtual void ClearButtons() override;
+	
 	/// Returns if text input is enabled.
 	bool IsTextInputEnabled() const;
 	/// Sets if text input is enabled and therefore if calling GetNextCharacter() make sense.
 	void SetTextInputEnabled(bool enabled);
 	/// Returns the next pending input character if text input is enabled.
-	char GetNextCharacter();
-
+	wchar_t* GetTextInput(uint32_t* count);
 	/// Returns the platform-specific implementation of this device (internal use only).
 	InputDeviceKeyboardImpl* GetPimpl() { return impl_; }
 
 protected:
-	void InternalUpdate(InputDeltaState* delta);
-	DeviceState InternalGetState() const;
+	void InternalUpdate(InputDeltaState* delta) override;
+	DeviceState InternalGetState() const override;
 
 private:
 	InputDeviceKeyboardImpl* impl_;

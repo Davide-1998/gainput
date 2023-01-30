@@ -5,7 +5,7 @@
 #include "../GainputWindows.h"
 
 #include "GainputInputDeviceKeyboardImpl.h"
-#include <gainput/GainputHelpers.h>
+#include "gainput/GainputHelpers.h"
 
 #ifndef HID_USAGE_PAGE_GENERIC
 #define HID_USAGE_PAGE_GENERIC         ((USHORT) 0x01)
@@ -171,6 +171,10 @@ public:
 		return deviceState_;
 	}
 
+	virtual InputState * GetNextInputState() override {
+		return &nextState_;
+	}
+
 	void Update(InputDeltaState* delta)
 	{
 		delta_ = delta;
@@ -179,7 +183,7 @@ public:
 
 	bool IsTextInputEnabled() const { return false; }
 	void SetTextInputEnabled(bool enabled) { }
-	char GetNextCharacter() { return 0; }
+	wchar_t* GetTextInput(uint32_t* count) { return NULL; }
 
 	void HandleMessage(const MSG& msg)
 	{

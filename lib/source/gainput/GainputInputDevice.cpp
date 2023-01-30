@@ -1,5 +1,5 @@
 
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 
 namespace gainput
 {
@@ -11,6 +11,7 @@ InputDevice::InputDevice(InputManager& manager, DeviceId device, unsigned index)
 	index_(index),
 	deadZones_(0),
 	debugRenderingEnabled_(false)
+	
 #if defined(GAINPUT_DEV) || defined(GAINPUT_ENABLE_RECORDER)
 	, synced_(false)
 #endif
@@ -26,6 +27,7 @@ void
 InputDevice::Update(InputDeltaState* delta)
 {
 	*previousState_ = *state_;
+	
 #if defined(GAINPUT_DEV)
 	if (synced_)
 	{
@@ -47,6 +49,7 @@ InputDevice::GetState() const
 	return InternalGetState();
 }
 
+	
 float InputDevice::GetDeadZone(DeviceButtonId buttonId) const
 {
 	if (!deadZones_
@@ -84,6 +87,13 @@ InputDevice::CheckAllButtonsDown(DeviceButtonSpec* outButtons, size_t maxButtonC
 	{
 		DeviceButtonId id(i);
 		if (IsValidButtonId(id) && GetBool(id))
+		{
+			outButtons[buttonsFound].deviceId = deviceId_;
+			outButtons[buttonsFound].buttonId = id;
+			++buttonsFound;
+		}
+		//we want to get notified if a button was released as well.
+		else if (IsValidButtonId(id) && !GetBool(id) && GetBoolPrevious(id))
 		{
 			outButtons[buttonsFound].deviceId = deviceId_;
 			outButtons[buttonsFound].buttonId = id;

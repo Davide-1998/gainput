@@ -1,7 +1,7 @@
 #ifndef GAINPUTLISTENER_H_
 #define GAINPUTLISTENER_H_
 
-#include <gainput/GainputAllocator.h>
+#include "gainput/GainputAllocator.h"
 #include "GainputNetAddress.h"
 
 namespace gainput {

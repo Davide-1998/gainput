@@ -1,0 +1,68 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+      "major": 3,
+      "minor": 23,
+      "patch": 0
+    },
+    "configurePresets": [
+      {
+        "name": "debug-clang",
+        "displayName": "Debug Clang (system-default)",
+        "description": "Using compilers: C = clang, CXX = clang++",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/debug-clang",
+        "cacheVariables": {
+          "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+          "CMAKE_C_COMPILER": "clang",
+          "CMAKE_CXX_COMPILER": "clang++",
+          "CMAKE_BUILD_TYPE": "Debug"
+        }
+      },
+      {
+        "name": "debug-clang-examples",
+        "displayName": "Debug Clang (system-default) with examples",
+        "description": "Using compilers: C = clang, CXX = clang++",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/debug-clang-examples",
+        "cacheVariables": {
+          "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+          "CMAKE_C_COMPILER": "clang",
+          "CMAKE_CXX_COMPILER": "clang++",
+          "CMAKE_BUILD_TYPE": "Debug",
+          "GAINPUT_SAMPLES": "ON",
+          "GAINPUT_TESTS": "ON"
+        }
+      },
+      {
+        "name": "release-clang-hid",
+        "displayName": "Release Clang (system-default) with HID",
+        "description": "Using compilers: C = clang, CXX = clang++",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/release-clang",
+        "cacheVariables": {
+          "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+          "CMAKE_C_COMPILER": "clang",
+          "CMAKE_CXX_COMPILER": "clang++",
+          "CMAKE_BUILD_TYPE": "Release",
+          "GAINPUT_ENABLE_HID": "ON",
+          "GAINPUT_SAMPLES": "ON",
+          "GAINPUT_TESTS": "ON"
+        }
+      }
+    ],
+    "buildPresets": [
+      {
+        "name": "debug-clang",
+        "configurePreset": "debug-clang"
+      },
+      {
+        "name": "debug-clang-examples",
+        "configurePreset": "debug-clang-examples"
+      },
+      {
+        "name": "release-clang-hid",
+        "configurePreset": "release-clang-hid"
+      }
+    ]
+}

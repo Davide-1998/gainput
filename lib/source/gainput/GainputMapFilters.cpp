@@ -1,6 +1,6 @@
 
-#include <gainput/gainput.h>
-#include <gainput/GainputMapFilters.h>
+#include "gainput/gainput.h"
+#include "gainput/GainputMapFilters.h"
 
 
 namespace gainput

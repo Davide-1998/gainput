@@ -1,26 +1,24 @@
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 
 #if defined(GAINPUT_PLATFORM_IOS) || defined(GAINPUT_PLATFORM_TVOS)
 
 #include "GainputInputDevicePadImpl.h"
-#include <gainput/GainputInputDeltaState.h>
-#include <gainput/GainputHelpers.h>
-#include <gainput/GainputLog.h>
+#include "gainput/GainputInputDeltaState.h"
+#include "gainput/GainputHelpers.h"
+#include "gainput/GainputLog.h"
 
 #include "GainputInputDevicePadIos.h"
-
-#import <GameController/GameController.h>
+#include "gainput/GainputIos.h"
 
 namespace gainput
 {
-
 InputDevicePadImplIos::GlobalControllerList* InputDevicePadImplIos::mappedControllers_;
 
 namespace
 {
 static bool isAppleTvRemote(GCController* controller)
 {
-#if defined(GAINPUT_PLATFORM_TVOS)
+#if defined(GAINPUT_IOS_HAPTICS)
     if (!controller)
     {
         return false;
@@ -124,6 +122,19 @@ static GCController* GetFirstNonMappedController()
 
 }
 
+// check if the device itself supports haptics
+bool SupportsHapticEngine()
+{
+#if defined(GAINPUT_IOS_HAPTICS)
+    if(@available(iOS 13.0, *))
+    {
+        id<CHHapticDeviceCapability> capabilities = [CHHapticEngine capabilitiesForHardware];
+        return capabilities.supportsHaptics;
+    }
+#endif
+    return false;
+}
+
 InputDevicePadImplIos::InputDevicePadImplIos(InputManager& manager, InputDevice& device, unsigned index, InputState& state, InputState& previousState) :
     manager_(manager),
     device_(device),
@@ -131,17 +142,21 @@ InputDevicePadImplIos::InputDevicePadImplIos(InputManager& manager, InputDevice&
     state_(state),
     previousState_(previousState),
     deviceState_(InputDevice::DS_UNAVAILABLE),
-    pausePressed_(false),
+    deltaState_(NULL),
+	deviceChangeCb(NULL),
     isMicro_(false),
     isNormal_(false),
     isExtended_(false),
     supportsMotion_(false),
     isRemote_(false),
-    gcController_(0)
+    gcController_(NULL)
+#ifdef GAINPUT_IOS_HAPTICS
+	,hapticMotorLeft(NULL)
+	,hapticMotorRight(NULL)
+#endif
 {
     (void)&this->manager_;
     (void)&this->previousState_;
-
     device_.SetDeadZone(PadButtonGyroscopeX, 0.1);
     device_.SetDeadZone(PadButtonGyroscopeY, 0.1);
     device_.SetDeadZone(PadButtonGyroscopeZ, 0.1);
@@ -150,78 +165,229 @@ InputDevicePadImplIos::InputDevicePadImplIos(InputManager& manager, InputDevice&
     {
         mappedControllers_ = manager.GetAllocator().New<GlobalControllerList>(manager.GetAllocator());
     }
+
+	__block InputDevicePadImplIos*devPad = this;
+	deviceConnectedObserver = [[NSNotificationCenter defaultCenter]
+									addObserverForName:GCControllerDidConnectNotification
+									object:nil
+									queue: [NSOperationQueue mainQueue]
+									usingBlock:^(NSNotification *note)
+									{
+										devPad->SetupController();
+									}
+								];
+
+	deviceDisconnectedObserver= [[NSNotificationCenter defaultCenter]
+									addObserverForName:GCControllerDidDisconnectNotification
+									object:nil
+									queue: [NSOperationQueue mainQueue]
+									usingBlock:^(NSNotification *note)
+									{
+										if(note.object)
+										{
+											if(note.object == gcController_)
+											{
+                                                if(deviceChangeCb)
+                                                    (*deviceChangeCb)(GetDeviceName(), false, devPad->index_);
+												devPad->deviceState_ = InputDevice::DS_UNAVAILABLE;
+												devPad->gcController_ = NULL;
+                                                if (@available(iOS 13.0, *)) {
+                                                    IOSHapticMotor* leftMotorDevice = (IOSHapticMotor*)devPad->hapticMotorLeft;
+                                                    IOSHapticMotor* rightMotorDevice = (IOSHapticMotor*)devPad->hapticMotorRight;
+													if(leftMotorDevice)
+                                                    	[leftMotorDevice cleanup];
+                                                    if(rightMotorDevice)
+														[rightMotorDevice cleanup];
+                                                    devPad->hapticMotorLeft = nil;
+                                                    devPad->hapticMotorRight = nil;
+                                                }
+											}
+										}
+									}
+								];
+}
+
+
+void InputDevicePadImplIos::SetOnDeviceChangeCallBack(void(*onDeviceChange)(const char*, bool added, int controllerId))
+{
+    deviceChangeCb = onDeviceChange;
+    if(deviceState_ == InputDevice::DS_OK)
+    {
+        if(deviceChangeCb)
+            (*deviceChangeCb)(GetDeviceName(), true, index_);
+    }
 }
 
 InputDevicePadImplIos::~InputDevicePadImplIos()
 {
+	if (mappedControllers_)
+	{
+		manager_.GetAllocator().Delete(mappedControllers_);
+		mappedControllers_ = NULL;
+	}
+	id<NSObject> connectObserver =(id<NSObject>)deviceConnectedObserver;
+	[[NSNotificationCenter defaultCenter] removeObserver:connectObserver];
+
+	id<NSObject> disconnectObserver = (id<NSObject>)deviceDisconnectedObserver;
+	[[NSNotificationCenter defaultCenter] removeObserver:disconnectObserver];
+}
+
+
+const char* InputDevicePadImplIos::GetDeviceName()
+{
+    if(deviceState_ != InputDevice::DS_OK)
+        return nullptr;
+    
+    GCController* controller = getGcController(gcController_);
+    if(controller)
+    {
+        return [controller.vendorName cStringUsingEncoding:NSASCIIStringEncoding];
+    }
+    
+    return nullptr;
+}
+
+
+bool InputDevicePadImplIos::SetRumbleEffect(float leftMotorIntensity, float rightMotorIntensity, uint32_t duration_ms, bool targetOwningDevice)
+{
+#if defined(GAINPUT_IOS_HAPTICS)
+	if(deviceState_ != InputDevice::DS_OK && targetOwningDevice == false)
+		return false;
+
+	float durationSec = (float)duration_ms / 1000.0f;
+
+	if (@available(iOS 13, *))
+	{
+        if(targetOwningDevice)
+        {
+			// swap values if left motor is 0
+			// otherwise there's no rumble at all.
+			if(leftMotorIntensity == 0.0f && rightMotorIntensity > 0.0f)
+			{
+				leftMotorIntensity = rightMotorIntensity;
+				rightMotorIntensity = 0.0f;
+			}
+
+			//use max intensity since we only have a single motor
+            [GainputView setPhoneHaptics:leftMotorIntensity sharpness:rightMotorIntensity seconds:durationSec];
+        }
+        else if (!targetOwningDevice)
+        {
+            if(hapticMotorLeft)
+            {
+				IOSHapticMotor* leftMotorDevice = (IOSHapticMotor*)hapticMotorLeft;
+                [leftMotorDevice setIntensity:leftMotorIntensity sharpness:1.0f duration:durationSec];
+            }
+
+            if(hapticMotorRight)
+            {
+				IOSHapticMotor* RightMotorDevice = (IOSHapticMotor*)hapticMotorRight;
+                [RightMotorDevice setIntensity:rightMotorIntensity sharpness:1.0f duration:durationSec];
+            }
+        }
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+void InputDevicePadImplIos::SetupController()
+{
+
+	GCController* newIncController = GetFirstNonMappedController();
+
+	if(!newIncController)
+		return;
+	if(@available(iOS 13.0, *))
+	{
+		if(newIncController.isSnapshot)
+			return;
+	}
+	if(!gcController_)
+	{
+		gcController_ = (void*)newIncController;
+	}
+	GCController* controller = getGcController(gcController_);
+	// check if we need to replace current controller with this one.
+	if (controller != newIncController)
+	{
+		// our current controller is valid
+		if(controller.isAttachedToDevice)
+		{
+			return;
+		}
+
+		CleanDisconnectedControllersFromMapping();
+		gcController_ = (void*) newIncController;
+		controller = newIncController;
+	}
+
+	GCControllerPlayerIndex newIndex = static_cast<GCControllerPlayerIndex>(index_);
+	if (controller.playerIndex != newIndex)
+	{
+		controller.playerIndex = newIndex;
+	}
+	isRemote_ = isAppleTvRemote(controller);
+	isExtended_ = [controller extendedGamepad] != 0;
+#if defined(GAINPUT_PLATFORM_TVOS)
+	isMicro_ = [controller microGamepad] != 0;
+#else
+	isMicro_ = false;
+#endif
+	isNormal_ = [controller extendedGamepad] != 0;
+	supportsMotion_ = [controller motion] != 0;
+
+	if (!isRemote_)
+	{
+		UpdateGamepad_();
+	}
+
+#if defined(GAINPUT_IOS_HAPTICS)
+    if(@available(iOS 14.0, *))
+    {
+        if([controller haptics] != nil)
+        {
+            if(hapticMotorLeft != nil)
+            {
+                [(IOSHapticMotor*)hapticMotorLeft cleanup];
+                hapticMotorLeft = nil;
+            }
+            if(hapticMotorRight != nil)
+            {
+                [(IOSHapticMotor*)hapticMotorRight cleanup];
+                hapticMotorRight = nil;
+            }
+            hapticMotorLeft = [[IOSHapticMotor alloc] initWithController:controller locality:(GCHapticsLocalityLeftHandle)];
+            hapticMotorRight = [[IOSHapticMotor alloc] initWithController:controller locality:(GCHapticsLocalityRightHandle)];
+        }
+    }
+#endif
+
+	deviceState_ = InputDevice::DS_OK;
+	mappedControllers_->push_back(gcController_);
+    
+    if(deviceChangeCb)
+        (*deviceChangeCb)(GetDeviceName(), true, index_);
+
 }
 
 void InputDevicePadImplIos::Update(InputDeltaState* delta)
 {
-    bool validHardwareController = IsValidHardwareController(getGcController(gcController_));
-    
-    if (!validHardwareController)
-    {
-        CleanDisconnectedControllersFromMapping();
-        GCController * firstNonMappedController = GetFirstNonMappedController();
-        
-        if (firstNonMappedController)
-        {
-            GCControllerPlayerIndex newIndex = static_cast<GCControllerPlayerIndex>(index_);
-            if (firstNonMappedController.playerIndex != newIndex)
-            {
-                firstNonMappedController.playerIndex = newIndex;
-            }
+	if (!gcController_)
+	{
+		deviceState_ = InputDevice::DS_UNAVAILABLE;
+		isExtended_ = false;
+		supportsMotion_ = false;
+		return;
+	}
 
-            // register pause menu button handler
-            __block InputDevicePadImplIos* block_deviceImpl = this;
-            firstNonMappedController.controllerPausedHandler = ^(GCController* controller)
-            {
-                block_deviceImpl->pausePressed_ = true;
-            };
-        }
-        else
-        {
-            deviceState_ = InputDevice::DS_UNAVAILABLE;
-            return;
-        }
-        gcController_ = firstNonMappedController;
-    }
-    
-    GAINPUT_ASSERT(gcController_);
-    if (!gcController_)
-    {
-        deviceState_ = InputDevice::DS_UNAVAILABLE;
-        isExtended_ = false;
-        supportsMotion_ = false;
-        return;
-    }
+	deltaState_ = delta;
 
-    deviceState_ = InputDevice::DS_OK;
-
-    GCController* controller = getGcController(gcController_);
-
-    isRemote_ = isAppleTvRemote(controller);
-    isExtended_ = [controller extendedGamepad] != 0;
-#if defined(GAINPUT_PLATFORM_TVOS)
-    isMicro_ = [controller microGamepad] != 0;
-#else
-    isMicro_ = false;
-#endif
-    isNormal_ = [controller gamepad] != 0;
-    supportsMotion_ = [controller motion] != 0;
-    
-    if (isRemote_)
-    {
-        UpdateRemote_(delta);
-    }
-    else
-    {
-        UpdateGamepad_(delta);
-    }
-    
-    HandleButton(device_, state_, delta, PadButtonHome, pausePressed_);
-    pausePressed_ = false;
+	if (isRemote_)
+	{
+		UpdateRemote_(deltaState_);
+	}
 }
 
 void InputDevicePadImplIos::UpdateRemote_(InputDeltaState* delta)
@@ -261,102 +427,156 @@ void InputDevicePadImplIos::UpdateRemote_(InputDeltaState* delta)
 #endif
 }
 
-void InputDevicePadImplIos::UpdateGamepad_(InputDeltaState* delta)
+void InputDevicePadImplIos::UpdateGamepad_()
 {
-    GCController* controller = getGcController(gcController_);
+	GCController* controller = getGcController(gcController_);
 
-    if (isExtended_)
-    {
-        GCExtendedGamepad* gamepad = [controller extendedGamepad];
-        
-        HandleButton(device_, state_, delta, PadButtonL1, gamepad.leftShoulder.pressed);
-        HandleButton(device_, state_, delta, PadButtonR1, gamepad.rightShoulder.pressed);
-        
-        HandleButton(device_, state_, delta, PadButtonLeft, gamepad.dpad.left.pressed);
-        HandleButton(device_, state_, delta, PadButtonRight, gamepad.dpad.right.pressed);
-        HandleButton(device_, state_, delta, PadButtonUp, gamepad.dpad.up.pressed);
-        HandleButton(device_, state_, delta, PadButtonDown, gamepad.dpad.down.pressed);
-        
-        HandleButton(device_, state_, delta, PadButtonA, gamepad.buttonA.pressed);
-        HandleButton(device_, state_, delta, PadButtonB, gamepad.buttonB.pressed);
-        HandleButton(device_, state_, delta, PadButtonX, gamepad.buttonX.pressed);
-        HandleButton(device_, state_, delta, PadButtonY, gamepad.buttonY.pressed);
-        
-        HandleAxis(device_, state_, delta, PadButtonLeftStickX, gamepad.leftThumbstick.xAxis.value);
-        HandleAxis(device_, state_, delta, PadButtonLeftStickY, gamepad.leftThumbstick.yAxis.value);
-        
-        HandleAxis(device_, state_, delta, PadButtonRightStickX, gamepad.rightThumbstick.xAxis.value);
-        HandleAxis(device_, state_, delta, PadButtonRightStickY, gamepad.rightThumbstick.yAxis.value);
-        
-        HandleButton(device_, state_, delta, PadButtonL2, gamepad.leftTrigger.pressed);
-        HandleAxis(device_, state_, delta, PadButtonAxis4, gamepad.leftTrigger.value);
-        HandleButton(device_, state_, delta, PadButtonR2, gamepad.rightTrigger.pressed);
-        HandleAxis(device_, state_, delta, PadButtonAxis5, gamepad.rightTrigger.value);
-    }
-    else if (isNormal_)
-    {
-        GCGamepad* gamepad = [controller gamepad];
-        
-        HandleButton(device_, state_, delta, PadButtonL1, gamepad.leftShoulder.pressed);
-        HandleButton(device_, state_, delta, PadButtonR1, gamepad.rightShoulder.pressed);
-        
-        HandleButton(device_, state_, delta, PadButtonLeft, gamepad.dpad.left.pressed);
-        HandleButton(device_, state_, delta, PadButtonRight, gamepad.dpad.right.pressed);
-        HandleButton(device_, state_, delta, PadButtonUp, gamepad.dpad.up.pressed);
-        HandleButton(device_, state_, delta, PadButtonDown, gamepad.dpad.down.pressed);
-        
-        HandleButton(device_, state_, delta, PadButtonA, gamepad.buttonA.pressed);
-        HandleButton(device_, state_, delta, PadButtonB, gamepad.buttonB.pressed);
-        HandleButton(device_, state_, delta, PadButtonX, gamepad.buttonX.pressed);
-        HandleButton(device_, state_, delta, PadButtonY, gamepad.buttonY.pressed);
-    }
+	if (isExtended_)
+	{
+		GCExtendedGamepad* gamepadExtended = [controller extendedGamepad];
+		controller.extendedGamepad.leftTrigger.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonL2, pressed);
+			HandleAxis(device_, state_, deltaState_, PadButtonAxis4, value);
+		};
+		controller.extendedGamepad.rightTrigger.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonR2, pressed);
+			HandleAxis(device_, state_, deltaState_, PadButtonAxis5, value);
+		};
+		controller.extendedGamepad.leftShoulder.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonL1, pressed);
+		};
+		controller.extendedGamepad.rightShoulder.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonR1, pressed);
+		};
+		controller.extendedGamepad.buttonA.pressedChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonA, pressed);
+		};
+		controller.extendedGamepad.buttonB.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonB, pressed);
+		};
+		controller.extendedGamepad.buttonX.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonX, pressed);
+		};
+		controller.extendedGamepad.buttonY.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+		{
+			HandleButton(device_, state_, deltaState_, PadButtonY, pressed);
+		};
+
+		controller.extendedGamepad.dpad.valueChangedHandler = ^(GCControllerDirectionPad * _Nonnull dpad, float xValue, float yValue)
+		{
+				HandleButton(device_, state_, deltaState_, PadButtonLeft, 	dpad.left.pressed);
+				HandleButton(device_, state_, deltaState_, PadButtonRight, 	dpad.right.pressed);
+				HandleButton(device_, state_, deltaState_, PadButtonUp, 	dpad.up.pressed);
+				HandleButton(device_, state_, deltaState_, PadButtonDown, 	dpad.down.pressed);
+		};
+
+		if (@available(iOS 12.1, tvOS 12.1, *))
+		{
+			gamepadExtended.leftThumbstickButton.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+			{
+				HandleButton(device_, state_, deltaState_, PadButtonL3, pressed);
+			};
+			gamepadExtended.rightThumbstickButton.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+			{
+				HandleButton(device_, state_, deltaState_, PadButtonR3, pressed);
+			};
+		}
+
+		if (@available(iOS 13.0, *))
+		{
+			gamepadExtended.buttonOptions.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+			{
+				HandleButton(device_, state_, deltaState_, PadButtonSelect, pressed);
+			};
+			gamepadExtended.buttonMenu.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+			{
+				HandleButton(device_, state_, deltaState_, PadButtonStart, pressed);
+			};
+		}
+
+		if (@available(iOS 14.0, *))
+		{
+			gamepadExtended.buttonHome.valueChangedHandler = ^(GCControllerButtonInput * _Nonnull button, float value, BOOL pressed)
+			{
+				HandleButton(device_, state_, deltaState_, PadButtonHome, pressed);
+			};
+		}
+
+		if(this->isExtended_)
+		{
+			gamepadExtended.leftThumbstick.valueChangedHandler = ^(GCControllerDirectionPad * _Nonnull dpad, float xValue, float yValue) {
+					HandleAxis(device_, state_, deltaState_, PadButtonLeftStickX, xValue);
+					HandleAxis(device_, state_, deltaState_, PadButtonLeftStickY, yValue);
+			};
+			gamepadExtended.rightThumbstick.valueChangedHandler = ^(GCControllerDirectionPad * _Nonnull dpad, float xValue, float yValue) {
+					HandleAxis(device_, state_, deltaState_, PadButtonRightStickX, xValue);
+					HandleAxis(device_, state_, deltaState_, PadButtonRightStickY, yValue);
+			};
+		}
+
+		controller.controllerPausedHandler = ^(GCController * _Nonnull controller) {
+			//do nothing
+		};
+
+		if (GCMotion* motion = [controller motion])
+		{
+			motion.valueChangedHandler = ^(GCMotion * _Nonnull motion)
+			{
+
+				HandleAxis(device_, state_, deltaState_, PadButtonAccelerationX, motion.userAcceleration.x);
+				HandleAxis(device_, state_, deltaState_, PadButtonAccelerationY, motion.userAcceleration.y);
+				HandleAxis(device_, state_, deltaState_, PadButtonAccelerationZ, motion.userAcceleration.z);
+
+				HandleAxis(device_, state_, deltaState_, PadButtonGravityX, motion.gravity.x);
+				HandleAxis(device_, state_, deltaState_, PadButtonGravityY, motion.gravity.y);
+				HandleAxis(device_, state_, deltaState_, PadButtonGravityZ, motion.gravity.z);
+
+				if (@available(iOS 11.0, *))
+				{
+					 const float gyroX = 2.0f * (motion.attitude.x * motion.attitude.z + motion.attitude.w * motion.attitude.y);
+					 const float gyroY = 2.0f * (motion.attitude.y * motion.attitude.z - motion.attitude.w * motion.attitude.x);
+					 const float gyroZ = 1.0f - 2.0f * (motion.attitude.x * motion.attitude.x + motion.attitude.y * motion.attitude.y);
+					 HandleAxis(device_, state_, deltaState_, PadButtonGyroscopeX, gyroX);
+					 HandleAxis(device_, state_, deltaState_, PadButtonGyroscopeY, gyroY);
+					 HandleAxis(device_, state_, deltaState_, PadButtonGyroscopeZ, gyroZ);
+				}
+			};
+		}
+
+	}
 #if defined(GAINPUT_PLATFORM_TVOS)
-    else if (isMicro_)
-    {
-        GCMicroGamepad * gamepad =  [controller microGamepad];
-        gamepad.reportsAbsoluteDpadValues  = YES;
-        HandleButton(device_, state_, delta, PadButtonA, gamepad.buttonA.pressed); // Force push on touch area
-        HandleButton(device_, state_, delta, PadButtonX, gamepad.buttonX.pressed); // Play/Pause Button
-        
-        HandleAxis(device_, state_, delta, PadButtonAxis30, gamepad.dpad.xAxis.value); // Touch area X
-        HandleAxis(device_, state_, delta, PadButtonAxis31, gamepad.dpad.yAxis.value); // Touch area Y
-    }
-#endif
-    
-    if (GCMotion* motion = [controller motion])
-    {
-        HandleAxis(device_, state_, delta, PadButtonAccelerationX, motion.userAcceleration.x);
-        HandleAxis(device_, state_, delta, PadButtonAccelerationY, motion.userAcceleration.y);
-        HandleAxis(device_, state_, delta, PadButtonAccelerationZ, motion.userAcceleration.z);
-        
-        HandleAxis(device_, state_, delta, PadButtonGravityX, motion.gravity.x);
-        HandleAxis(device_, state_, delta, PadButtonGravityY, motion.gravity.y);
-        HandleAxis(device_, state_, delta, PadButtonGravityZ, motion.gravity.z);
-        
-        const float gyroX = 2.0f * (motion.attitude.x * motion.attitude.z + motion.attitude.w * motion.attitude.y);
-        const float gyroY = 2.0f * (motion.attitude.y * motion.attitude.z - motion.attitude.w * motion.attitude.x);
-        const float gyroZ = 1.0f - 2.0f * (motion.attitude.x * motion.attitude.x + motion.attitude.y * motion.attitude.y);
+	else if (isMicro_)
+	{
+		GCMicroGamepad * gamepad =  [controller microGamepad];
+		gamepad.reportsAbsoluteDpadValues  = YES;
+		HandleButton(device_, state_, deltaState_, PadButtonA, gamepad.buttonA.pressed); // Force push on touch area
+		HandleButton(device_, state_, deltaState_, PadButtonX, gamepad.buttonX.pressed); // Play/Pause Button
 
-        HandleAxis(device_, state_, delta, PadButtonGyroscopeX, gyroX);
-        HandleAxis(device_, state_, delta, PadButtonGyroscopeY, gyroY);
-        HandleAxis(device_, state_, delta, PadButtonGyroscopeZ, gyroZ);
-    }
+		HandleAxis(device_, state_, deltaState_, PadButtonAxis30, gamepad.dpad.xAxis.value); // Touch area X
+		HandleAxis(device_, state_, deltaState_, PadButtonAxis31, gamepad.dpad.yAxis.value); // Touch area Y
+	}
+#endif
 }
 
 bool InputDevicePadImplIos::IsValidButton(DeviceButtonId deviceButton) const
 {
-    if (supportsMotion_ && deviceButton >= PadButtonAccelerationX && deviceButton <= PadButtonMagneticFieldZ)
-    {
-        return true;
-    }
-    if (isExtended_)
-    {
-        return (deviceButton >= PadButtonLeftStickX && deviceButton <= PadButtonAxis5)
-            || (deviceButton >= PadButtonLeft && deviceButton <= PadButtonR2)
-            || deviceButton == PadButtonHome;
-    }
-    return (deviceButton >= PadButtonLeft && deviceButton <= PadButtonR1)
-        || deviceButton == PadButtonHome;
+	if (supportsMotion_ && deviceButton >= PadButtonAccelerationX && deviceButton <= PadButtonMagneticFieldZ)
+	{
+		return true;
+	}
+	if (isExtended_)
+	{
+		return (deviceButton >= PadButtonLeftStickX && deviceButton <= PadButtonAxis5)
+			|| (deviceButton >= PadButtonStart && deviceButton <= PadButtonHome);
+	}
+	return (deviceButton >= PadButtonStart && deviceButton <= PadButtonHome);
 }
 
 }

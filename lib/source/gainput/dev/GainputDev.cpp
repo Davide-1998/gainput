@@ -1,5 +1,5 @@
 
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 
 #ifdef GAINPUT_DEV
 
@@ -14,9 +14,9 @@
 #include "GainputNetListener.h"
 #include "GainputNetConnection.h"
 #include "GainputMemoryStream.h"
-#include <gainput/GainputInputDeltaState.h>
-#include <gainput/GainputHelpers.h>
-#include <gainput/GainputLog.h>
+#include "GainputInputDeltaState.h"
+#include "GainputHelpers.h"
+#include "GainputLog.h"
 
 #if _MSC_VER
 #define snprintf _snprintf
@@ -153,7 +153,7 @@ public:
 		return true;
 	}
 
-	bool OnDeviceButtonFloat(DeviceId deviceId, DeviceButtonId deviceButton, float, float newValue)
+	bool OnDeviceButtonFloat(float /*deltaTime*/, DeviceId deviceId, DeviceButtonId deviceButton, float, float newValue)
 	{
 		if (!devConnection || devSyncedDevices.find(deviceId) == devSyncedDevices.end())
 			return true;

@@ -2,6 +2,11 @@
 #ifndef GAINPUTINPUTMANAGER_H_
 #define GAINPUTINPUTMANAGER_H_
 
+#if defined(GAINPUT_PLATFORM_ANDROID)
+struct ANativeActivity;
+#endif
+
+#define CONTROLLER_ID 4
 
 namespace gainput
 {
@@ -27,23 +32,28 @@ public:
 	/// Initializes the manager.
 	/**
 	 * Further initialization is typically necessary.
-	 * \param useSystemTime Specifies if the GetTime() function uses system time or the time
-	 * supplied to Update(uint64_t).
 	 * \param allocator The memory allocator to be used for all allocations.
 	 * \see SetDisplaySize
 	 * \see GetTime
 	 */
-	InputManager(bool useSystemTime = true, Allocator& allocator = GetDefaultAllocator());
+	InputManager(Allocator& allocator = GetDefaultAllocator());
 
-	/// Destructs the manager.
-	~InputManager();
+    /**
+     * Initialize the input manager.
+     */
+    void Init(void* windowInstance);
+
+    /**
+     * Shutdown the input manager and free any memory it allocated.
+     */
+    void Exit();
 
 	/// Sets the window resolution.
 	/**
 	 * Informs the InputManager and its devices of the size of the window that is used for
 	 * receiving inputs. For example, the size is used to to normalize mouse inputs.
 	 */
-	void SetDisplaySize(int width, int height) { displayWidth_ = width; displayHeight_ = height; }
+	void SetDisplaySize(int width, int height) { mDisplayWidth = width; mDisplayHeight = height; }
 
 #if defined(GAINPUT_PLATFORM_LINUX)
 	/// [LINUX ONLY] Lets the InputManager handle the given X event.
@@ -61,9 +71,9 @@ public:
 	 */
 	void HandleMessage(const MSG& msg);
 #endif
-#if defined(GAINPUT_PLATFORM_ANDROID)
+#if defined(GAINPUT_PLATFORM_ANDROID)	
 	/// [ANDROID ONLY] Lets the InputManager handle the given input event.
-	int32_t HandleInput(AInputEvent* event);
+	int32_t HandleInput(AInputEvent* event, ANativeActivity* activity);
 
 	struct DeviceInput
 	{
@@ -81,26 +91,15 @@ public:
 #endif
 
 	/// Updates the input state, call this every frame.
-	/**
-	 * If the InputManager was initialized with `useSystemTime` set to `false`, you have to
-	 * call Update(uint64_t) instead.
-	 * \see GetTime
-	 */
-	void Update();
+	void Update(float deltaTime);
 
-	/// Updates the input state and the manager's time, call this every frame.
 	/**
-	 * Updates the time returned by GetTime() and then calls the regular Update(). This function
-	 * should only be called if the InputManager was initialized with `useSystemTime`
-	 * set to `false`.
-	 * \param deltaTime The provided must be in milliseconds.
-	 * \see Update
-	 * \see GetTime
+	 * This is used to to clear all input states from all registered devices
 	 */
-	void Update(uint64_t deltaTime);
+	void ClearAllStates(gainput::DeviceId deviceId = gainput::InvalidDeviceId);
 
 	/// Returns the allocator to be used for memory allocations.
-	Allocator& GetAllocator() const { return allocator_; }
+	Allocator& GetAllocator() const { return mAllocator; }
 
 	/// Returns a monotonic time in milliseconds.
 	uint64_t GetTime() const;
@@ -114,6 +113,7 @@ public:
 	 * \return The ID of the newly created input device.
 	 */
 	template<class T> DeviceId CreateDevice(unsigned index = InputDevice::AutoIndex, InputDevice::DeviceVariant variant = InputDevice::DV_STANDARD);
+	
 	/// Creates an input device, registers it with the manager and returns it.
 	/**
 	 * \tparam T The input device class, muste be derived from InputDevice.
@@ -155,13 +155,13 @@ public:
 	typedef DeviceMap::const_iterator const_iterator;
 
 	/// Returns the begin iterator over all registered devices.
-	iterator begin() { return devices_.begin(); }
+	iterator begin() { return mDevices.begin(); }
 	/// Returns the end iterator over all registered devices.
-	iterator end() { return devices_.end(); }
+	iterator end() { return mDevices.end(); }
 	/// Returns the begin iterator over all registered devices.
-	const_iterator begin() const { return devices_.begin(); }
+	const_iterator begin() const { return mDevices.begin(); }
 	/// Returns the end iterator over all registered devices.
-	const_iterator end() const { return devices_.end(); }
+	const_iterator end() const { return mDevices.end(); }
 
 	/// Registers a listener to be notified when a button state changes.
 	/**
@@ -189,9 +189,9 @@ public:
 	/// Returns the number of devices with the given type.
 	unsigned GetDeviceCountByType(InputDevice::DeviceType type) const;
 	/// Returns the graphical display's width in pixels.
-	int GetDisplayWidth() const { return displayWidth_; }
+	int GetDisplayWidth() const { return mDisplayWidth; }
 	/// Returns the graphical display's height in pixels.
-	int GetDisplayHeight() const { return displayHeight_; }
+	int GetDisplayHeight() const { return mDisplayHeight; }
 
 	/// Registers a modifier that will be called after devices have been updated.
 	ModifierId AddDeviceStateModifier(DeviceStateModifier* modifier);
@@ -209,28 +209,32 @@ public:
 	/// Enable/disable debug rendering of input devices.
 	void SetDebugRenderingEnabled(bool enabled);
 	/// Returns true if debug rendering is enabled, false otherwise.
-	bool IsDebugRenderingEnabled() const { return debugRenderingEnabled_; }
+	bool IsDebugRenderingEnabled() const { return mDebugRendererEnabled; }
 	/// Sets the debug renderer to be used if debug rendering is enabled.
 	void SetDebugRenderer(DebugRenderer* debugRenderer);
 	/// Returns the previously set debug renderer.
-	DebugRenderer* GetDebugRenderer() const { return debugRenderer_; }
+	DebugRenderer* GetDebugRenderer() const { return pDebugRenderer; }
 
+	//getter/setter for window Instance window instance 
+	void SetWindowsInstance(void* instance) { pWindowInstance = instance; }
+	void* GetWindowsInstance() { return pWindowInstance; }
 private:
-	Allocator& allocator_;
+    Allocator& mAllocator;
 
-	DeviceMap devices_;
-	unsigned nextDeviceId_;
+    DeviceMap mDevices;
+    unsigned mNextDeviceID;
 
-	HashMap<ListenerId, InputListener*> listeners_;
-	unsigned nextListenerId_;
-	Array<InputListener*> sortedListeners_;
+    HashMap<ListenerId, InputListener*> mListeners;
+    unsigned mNextListenerID;
+    Array<InputListener*> mSortedListeners;
 
-	HashMap<ModifierId, DeviceStateModifier*> modifiers_;
-	unsigned nextModifierId_;
+    HashMap<ModifierId, DeviceStateModifier*> mModifiers;
+    unsigned mNextModifierID;
 
-	InputDeltaState* deltaState_;
+    InputDeltaState* pDeltaState;
 
-	uint64_t currentTime_;
+	float mDeltaTimeRemainderMs;
+	uint64_t mCurrentTime;
     struct Change
     {
         InputDevice* device;
@@ -245,21 +249,22 @@ private:
 		};
     };
     
-    GAINPUT_CONC_QUEUE(Change) concurrentInputs_;
+    GAINPUT_CONC_QUEUE(Change) mConcurrentInputs;
 
-	int displayWidth_;
-	int displayHeight_;
-	bool useSystemTime_;
+    int mDisplayWidth;
+    int mDisplayHeight;
 
-	bool debugRenderingEnabled_;
-	DebugRenderer* debugRenderer_;
+    bool mDebugRendererEnabled;
+    DebugRenderer* pDebugRenderer;
+    void* pWindowInstance;
+    bool mInitialized;
     
 	void DeviceCreated(InputDevice* device);
 
 	// Do not copy.
 	InputManager(const InputManager &);
 	InputManager& operator=(const InputManager &);
-
+public:
 };
 
 
@@ -268,10 +273,10 @@ inline
 DeviceId
 InputManager::CreateDevice(unsigned index, InputDevice::DeviceVariant variant)
 {
-	T* device = allocator_.New<T>(*this, nextDeviceId_, index, variant);
-	devices_[nextDeviceId_] = device;
+	T* device = mAllocator.New<T>(*this, mNextDeviceID, index, variant);
+    mDevices[mNextDeviceID] = device;
 	DeviceCreated(device);
-	return nextDeviceId_++;
+	return mNextDeviceID++;
 }
 
 template<class T>
@@ -279,10 +284,10 @@ inline
 T*
 InputManager::CreateAndGetDevice(unsigned index, InputDevice::DeviceVariant variant)
 {
-	T* device = allocator_.New<T>(*this, nextDeviceId_, index, variant);
-	devices_[nextDeviceId_] = device;
-	++nextDeviceId_;
+	T* device = mAllocator.New<T>(*this, mNextDeviceID, index, variant);
+    mDevices[mNextDeviceID] = device;
 	DeviceCreated(device);
+    ++mNextDeviceID;
 	return device;
 }
 
@@ -290,8 +295,8 @@ inline
 InputDevice*
 InputManager::GetDevice(DeviceId deviceId)
 {
-	DeviceMap::iterator it = devices_.find(deviceId);
-	if (it == devices_.end())
+	DeviceMap::iterator it = mDevices.find(deviceId);
+	if (it == mDevices.end())
 	{
 		return 0;
 	}
@@ -302,8 +307,8 @@ inline
 const InputDevice*
 InputManager::GetDevice(DeviceId deviceId) const
 {
-	DeviceMap::const_iterator it = devices_.find(deviceId);
-	if (it == devices_.end())
+	DeviceMap::const_iterator it = mDevices.find(deviceId);
+	if (it == mDevices.end())
 	{
 		return 0;
 	}

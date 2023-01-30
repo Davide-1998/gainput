@@ -114,7 +114,7 @@ void SampleMain()
 
 	while (!SfwIsDone() && !doExit)
 	{
-		manager.Update();
+		manager.Update(0.0f);
 
 #if defined(GAINPUT_PLATFORM_LINUX)
 		XEvent event;

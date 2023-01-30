@@ -2,7 +2,7 @@
 #ifndef GAINPUTHELPERS_H_
 #define GAINPUTHELPERS_H_
 
-#include <gainput/GainputLog.h>
+#include "GainputLog.h"
 
 namespace gainput
 {
@@ -19,12 +19,8 @@ namespace gainput
 		if (delta)
 		{
 			const bool oldValue = state.GetBool(buttonId);
-			if (value != oldValue)
-			{
-				delta->AddChange(device.GetDeviceId(), buttonId, oldValue, value);
-			}
+			delta->AddChange(device.GetDeviceId(), buttonId, oldValue, value);			
 		}
-
 		state.Set(buttonId, value);
 	}
 
@@ -55,13 +51,10 @@ namespace gainput
 		if (delta)
 		{
 			const float oldValue = state.GetFloat(buttonId);
-			if (value != oldValue)
-			{
-				delta->AddChange(device.GetDeviceId(), buttonId, oldValue, value);
-			}
+			delta->AddChange(device.GetDeviceId(), buttonId, oldValue, value);			
 		}
-
-		state.Set(buttonId, value);
+        state.Set(buttonId, value);
+		
 	}
 
 }

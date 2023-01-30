@@ -1,7 +1,4 @@
-This project is archived. It's neither maintained nor developed anymore.
-=======
-
-Gainput [![Build Status](https://travis-ci.org/jkuhlmann/gainput.png?branch=master)](https://travis-ci.org/jkuhlmann/gainput) [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+Gainput [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 =======
 
 Gainput is the awesome C++ input library for your game:
@@ -14,6 +11,15 @@ Gainput is the awesome C++ input library for your game:
 - [complete list of features](#features)
 - [API documentation](http://gainput.johanneskuhlmann.de/api/)
 
+
+2023 fork of [@jochumdev](https://github.com/jochumdev)
+-------------------------------------------------------
+
+- Include the changes from [The-Forge](https://github.com/ConfettiFX/The-Forge/tree/master/Common_3/ThirdParty/OpenSource/gainput)
+	* Adds support for HID Devices most notably PS4 and PS5 controllers, this *should* work on Linux, all other's platforms need rework, it work's on all plattform within in The-Forge.
+- Extends the CMake support
+- Switched from an internal build of HIDApi to libhidapi.
+- WIP for switching the Displaymanager on Linux (Xlib+Wayland support in the same binary).
 
 Usage
 -----

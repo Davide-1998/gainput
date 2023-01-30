@@ -2,7 +2,7 @@
 #ifndef GAINPUT_LOG_H_
 #define GAINPUT_LOG_H_
 
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 
 #if defined(GAINPUT_PLATFORM_LINUX)
 
@@ -11,7 +11,7 @@
 	#define GAINPUT_LOG(...) printf(__VA_ARGS__);
 #endif
 
-#elif defined(GAINPUT_PLATFORM_WIN)
+#elif defined(GAINPUT_PLATFORM_WIN) || defined(GAINPUT_PLATFORM_XBOX_ONE)
 
 #if defined(GAINPUT_DEBUG) || defined(GAINPUT_DEV)
 	#include <stdio.h>
@@ -19,7 +19,7 @@
 	#define GAINPUT_LOG(...) { char buf[1024]; sprintf(buf, __VA_ARGS__); OutputDebugStringA(buf); }
 #endif
 
-#elif defined(GAINPUT_PLATFORM_ANDROID)
+#elif defined(GAINPUT_PLATFORM_ANDROID) || defined(GAINPUT_PLATFORM_QUEST)
 
 #if defined(GAINPUT_DEBUG) || defined(GAINPUT_DEV)
 	#include <android/log.h>

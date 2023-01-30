@@ -3,7 +3,8 @@
 #define GAINPUTINPUTDEVICEMOUSEWINRAW_H_
 
 #include "GainputInputDeviceMouseImpl.h"
-#include <gainput/GainputHelpers.h>
+#include "gainput/GainputHelpers.h"
+#include "gainput/GainputLog.h"
 
 #include "../GainputWindows.h"
 
@@ -38,6 +39,11 @@ public:
 		if (RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])))
 		{
 			deviceState_ = InputDevice::DS_OK;
+			//keep track of all relative changes
+			absMousePosX = 0;
+			absMousePosY = 0;
+			absPrevMousePosX = 0;
+			absPrevMousePosY = 0;
 		}
 	}
 
@@ -49,6 +55,10 @@ public:
 	InputDevice::DeviceState GetState() const
 	{
 		return deviceState_;
+	}
+	
+	virtual InputState * GetNextInputState() override {
+		return &nextState_;
 	}
 
 	void Update(InputDeltaState* delta)
@@ -72,26 +82,38 @@ public:
 		GAINPUT_ASSERT(state_);
 		GAINPUT_ASSERT(previousState_);
 
+
 		if (msg.message != WM_INPUT)
 		{
 			return;
 		}
 
-		UINT dwSize = 40;
-		static BYTE lpb[40];
-	    
-		GetRawInputData((HRAWINPUT)msg.lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
-	    
-		RAWINPUT* raw = (RAWINPUT*)lpb;
+		// Swapped to querying size as statically inputing the size mis-IDed the events
+		UINT size = 0;
+		UINT result = GetRawInputData((HRAWINPUT)msg.lParam, RID_INPUT, NULL, &size, sizeof(RAWINPUTHEADER));
+		if (result)
+			return;
+
+		// Must be x4.66 at minimum due to the size of gamepad events
+		static const UINT capacity = sizeof(RAWINPUT) * 125;
+		static BYTE data[capacity];
+
+		GAINPUT_ASSERT(size <= capacity);
+
+		GetRawInputData((HRAWINPUT)msg.lParam, RID_INPUT, data, &size, sizeof(RAWINPUTHEADER));
+
+		RAWINPUT* raw = (RAWINPUT*)&data;
 	    
 		if (raw->header.dwType == RIM_TYPEMOUSE) 
 		{
 			if (raw->data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
 			{
-				const float prevX = previousState_->GetFloat(MouseAxisX);
-				HandleAxis(device_, nextState_, delta_, MouseAxisX, prevX + float(raw->data.mouse.lLastX));
-				const float prevY = previousState_->GetFloat(MouseAxisY);
-				HandleAxis(device_, nextState_, delta_, MouseAxisY, prevY + float(raw->data.mouse.lLastY));
+				absMousePosX += raw->data.mouse.lLastX;
+				absMousePosY += raw->data.mouse.lLastY;
+
+				HandleAxis(device_, nextState_, delta_, MouseAxisX, (float)absMousePosX);
+				HandleAxis(device_, nextState_, delta_, MouseAxisY, (float)absMousePosY);
+
 			}
 			else if (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
 			{
@@ -171,6 +193,11 @@ private:
 	InputState nextState_;
 	InputDeltaState* delta_;
 	Array<DeviceButtonId> buttonsToReset_;
+
+	int absMousePosX;
+	int absMousePosY;
+	int absPrevMousePosX;
+	int absPrevMousePosY;
 };
 
 }

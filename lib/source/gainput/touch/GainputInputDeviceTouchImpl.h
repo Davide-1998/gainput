@@ -14,6 +14,11 @@ public:
 	virtual void Update(InputDeltaState* delta) = 0;
     virtual bool SupportsPressure() const { return false; }
 	virtual InputState* GetNextInputState() { return 0; }
+	
+	virtual void GetVirtualKeyboardInput(char* buffer, uint32_t inbufferLength) const {
+		if(buffer) *buffer='\0';
+	}
+
 };
 
 }

@@ -147,6 +147,11 @@ public:
 	/// Returns the platform-specific implementation of this device.
 	InputDevicePadImpl* GetPimpl() { return impl_; }
 
+	const char* GetDeviceName();
+	bool SetRumbleEffect(float left_motor, float right_motor, uint32_t duration_ms, bool targetOwningDevice = false);
+	void SetLEDColor(uint8_t r, uint8_t g, uint8_t b);
+	void SetOnDeviceChangeCallBack(void(*onDeviceChange)(const char*, bool added, int controllerID));
+
 protected:
 	void InternalUpdate(InputDeltaState* delta);
 

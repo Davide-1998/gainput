@@ -3,7 +3,7 @@
 #define GAINPUTINPUTDEVICEMOUSEWIN_H_
 
 #include "GainputInputDeviceMouseImpl.h"
-#include <gainput/GainputHelpers.h>
+#include "gainput/GainputHelpers.h"
 
 #include "../GainputWindows.h"
 
@@ -23,6 +23,10 @@ public:
 	{
 	}
 
+	virtual InputState * GetNextInputState() override 
+	{ 
+		return &nextState_; 
+	}
 	InputDevice::DeviceVariant GetVariant() const
 	{
 		return InputDevice::DV_STANDARD;
@@ -33,8 +37,14 @@ public:
 		delta_ = delta;
 
 		// Reset mouse wheel buttons
-		HandleButton(device_, nextState_, delta_, MouseButton3, false);
-		HandleButton(device_, nextState_, delta_, MouseButton4, false);
+		if (previousState_->GetBool(MouseButton3))
+		{
+			HandleButton(device_, nextState_, delta_, MouseButton3, false);
+		}
+		if (previousState_->GetBool(MouseButton4))
+		{
+			HandleButton(device_, nextState_, delta_, MouseButton4, false);
+		}
 
 		*state_ = nextState_;
 	}
@@ -44,7 +54,7 @@ public:
 		GAINPUT_ASSERT(state_);
 		GAINPUT_ASSERT(previousState_);
 
-		DeviceButtonId buttonId;
+		DeviceButtonId buttonId = UINT32_MAX;
 		bool pressed = false;
 		bool moveMessage = false;
 		int ax = -1;
@@ -90,16 +100,20 @@ public:
 			break;
 		case WM_MOUSEWHEEL:
 			{
+				static float wheelCount = 0.0f;
 				int wheel = GET_WHEEL_DELTA_WPARAM(msg.wParam);
+				wheelCount += wheel;
 				if (wheel < 0)
 				{
 					buttonId = MouseButton4;
 					pressed = true;
+					nextState_.Set(buttonId, wheelCount);
 				}
 				else if (wheel > 0)
 				{
 					buttonId = MouseButton3;
 					pressed = true;
+					nextState_.Set(buttonId, wheelCount);
 				}
 				break;
 			}
@@ -109,14 +123,17 @@ public:
 
 		if (moveMessage)
 		{
-			float x = float(ax)/float(manager_.GetDisplayWidth());
-			float y = float(ay)/float(manager_.GetDisplayHeight());
+			float x = float(ax);
+			float y = float(ay);
 			HandleAxis(device_, nextState_, delta_, MouseAxisX, x);
 			HandleAxis(device_, nextState_, delta_, MouseAxisY, y);
 		}
 		else
 		{
-			HandleButton(device_, nextState_, delta_, buttonId, pressed);
+			if (UINT32_MAX != buttonId)
+			{
+				HandleButton(device_, nextState_, delta_, buttonId, pressed);
+			}
 		}
 	}
 

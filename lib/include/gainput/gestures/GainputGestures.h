@@ -57,13 +57,13 @@ protected:
 }
 
 
-#include <gainput/gestures/GainputButtonStickGesture.h>
-#include <gainput/gestures/GainputDoubleClickGesture.h>
-#include <gainput/gestures/GainputHoldGesture.h>
-#include <gainput/gestures/GainputPinchGesture.h>
-#include <gainput/gestures/GainputRotateGesture.h>
-#include <gainput/gestures/GainputSimultaneouslyDownGesture.h>
-#include <gainput/gestures/GainputTapGesture.h>
+#include "GainputButtonStickGesture.h"
+#include "GainputDoubleClickGesture.h"
+#include "GainputHoldGesture.h"
+#include "GainputPinchGesture.h"
+#include "GainputRotateGesture.h"
+#include "GainputSimultaneouslyDownGesture.h"
+#include "GainputTapGesture.h"
 
 #endif
 

@@ -1,4 +1,4 @@
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 
 #ifdef GAINPUT_DEV
 #include "GainputNetAddress.h"

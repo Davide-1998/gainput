@@ -1,5 +1,5 @@
 
-#include <gainput/gainput.h>
+#include "gainput/gainput.h"
 
 #ifdef GAINPUT_ENABLE_RECORDER
 
@@ -32,7 +32,7 @@ namespace
 			return true;
 		}
 
-		bool OnDeviceButtonFloat(gainput::DeviceId deviceId, gainput::DeviceButtonId deviceButton, float /*oldValue*/, float newValue)
+		bool OnDeviceButtonFloat(float /*deltaTime*/, gainput::DeviceId deviceId, gainput::DeviceButtonId deviceButton, float /*oldValue*/, float newValue)
 		{
 			if (!recorder_.IsDeviceToRecord(deviceId))
 			{

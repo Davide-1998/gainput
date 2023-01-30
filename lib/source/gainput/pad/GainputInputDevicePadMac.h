@@ -5,6 +5,7 @@
 
 namespace gainput
 {
+typedef void(*DeviceChangeCB)(const char*, bool, int controllerID);
 
 class InputDevicePadImplMac : public InputDevicePadImpl
 {
@@ -12,27 +13,31 @@ public:
 	InputDevicePadImplMac(InputManager& manager, InputDevice& device, unsigned index, InputState& state, InputState& previousState);
 	~InputDevicePadImplMac();
 
-	InputDevice::DeviceVariant GetVariant() const
+    virtual InputDevice::DeviceVariant GetVariant() const override
 	{
 		return InputDevice::DV_STANDARD;
 	}
 
-	void Update(InputDeltaState* delta);
+    virtual void Update(InputDeltaState* delta) override;
 
-	InputDevice::DeviceState GetState() const
+    virtual InputDevice::DeviceState GetState() const override
 	{
 		return deviceState_;
 	}
 
-	bool IsValidButton(DeviceButtonId deviceButton) const;
+    virtual bool IsValidButton(DeviceButtonId deviceButton) const override;
 
-	bool Vibrate(float leftMotor, float rightMotor)
+    virtual bool Vibrate(float leftMotor, float rightMotor) override
 	{
 		return false;
 	}
+	virtual const char* GetDeviceName() override;
+
+	virtual void SetOnDeviceChangeCallBack(void(*onDeviceChange)(const char*, bool added, int controllerID)) override;
 
 	HashMap<unsigned, DeviceButtonId> buttonDialect_;
 	HashMap<unsigned, DeviceButtonId> axisDialect_;
+	bool  alternativeDPadScheme;
 	float minAxis_;
 	float maxAxis_;
 	float minTriggerAxis_;
@@ -45,6 +50,9 @@ public:
 	InputState nextState_;
 	InputDeltaState* delta_;
 	InputDevice::DeviceState deviceState_;
+	DeviceChangeCB deviceChangeCb;
+	const char * deviceName;
+	const char * serialNumber;
 
 	void* ioManager_;
 

@@ -2,12 +2,14 @@
 #ifndef GAINPUTINPUTDEVICEKEYBOARDLINUX_H_
 #define GAINPUTINPUTDEVICEKEYBOARDLINUX_H_
 
+#ifdef __linux__
+
 #include <X11/Xlib.h>
 #include <X11/XKBlib.h>
 #include <X11/Xutil.h>
 
 #include "GainputInputDeviceKeyboardImpl.h"
-#include <gainput/GainputHelpers.h>
+#include "gainput/GainputHelpers.h"
 
 namespace gainput
 {
@@ -19,6 +21,7 @@ public:
 		manager_(manager),
 		device_(device),
 		textInputEnabled_(true),
+		textCount_(0),
 		dialect_(manager_.GetAllocator()),
 		state_(&state),
 		previousState_(&previousState),
@@ -163,27 +166,29 @@ public:
 		dialect_[XK_exclam] = KeyExclam;
 	}
 
-	InputDevice::DeviceVariant GetVariant() const
+	InputDevice::DeviceVariant GetVariant() const override
 	{
 		return InputDevice::DV_STANDARD;
 	}
 
-	void Update(InputDeltaState* delta)
+	void Update(InputDeltaState* delta) override
 	{
 		delta_ = delta;
 		*state_ = nextState_;
+		textCount_ = 0;
+        memset(textBuffer_, 0, sizeof(textBuffer_));
 	}
 
-	bool IsTextInputEnabled() const { return textInputEnabled_; }
-	void SetTextInputEnabled(bool enabled) { textInputEnabled_ = enabled; }
+	virtual InputState * GetNextInputState() override {
+		return &nextState_;
+	}
 
-	char GetNextCharacter()
+	bool IsTextInputEnabled() const override { return textInputEnabled_; }
+	void SetTextInputEnabled(bool enabled) override { textInputEnabled_ = enabled; }
+	wchar_t* GetTextInput(uint32_t* count) override
 	{
-		if (!textBuffer_.CanGet())
-		{
-			return 0;
-		}
-		return textBuffer_.Get();
+		*count = textCount_;
+		return textBuffer_;
 	}
 
 	void HandleEvent(XEvent& event)
@@ -197,22 +202,18 @@ public:
 			KeySym keySym = XkbKeycodeToKeysym(keyEvent.display, keyEvent.keycode, 0, 0);
 			const bool pressed = event.type == KeyPress;
 
-			// Handle key repeat
-			if (event.type == KeyRelease && XPending(keyEvent.display))
-			{
-				XEvent nextEvent;
-				XPeekEvent(keyEvent.display, &nextEvent);
-				if (nextEvent.type == KeyPress
-					&& nextEvent.xkey.keycode == event.xkey.keycode
-					&& nextEvent.xkey.time == event.xkey.time)
-				{
-					XNextEvent(keyEvent.display, &nextEvent);
-					return;
-				}
-			}
-
 			if (dialect_.count(keySym))
 			{
+				if (textInputEnabled_ && pressed)
+				{
+					char buf[32];
+					int len = XLookupString(&keyEvent, buf, 32, 0, 0);
+					if (len == 1)
+					{
+						textBuffer_[textCount_++] = (wchar_t)buf[0];
+					}
+				}
+
 				const DeviceButtonId buttonId = dialect_[keySym];
 				HandleButton(device_, nextState_, delta_, buttonId, pressed);
 			}
@@ -223,16 +224,6 @@ public:
 				GAINPUT_LOG("Unmapped key >> keycode: %d, keysym: %d, str: %s\n", keyEvent.keycode, int(keySym), str);
 			}
 #endif
-
-			if (textInputEnabled_)
-			{
-				char buf[32];
-				int len = XLookupString(&keyEvent, buf, 32, 0, 0);
-				if (len == 1)
-				{
-					textBuffer_.Put(buf[0]);
-				}
-			}
 		}
 	}
 
@@ -240,7 +231,8 @@ private:
 	InputManager& manager_;
 	InputDevice& device_;
 	bool textInputEnabled_;
-	RingBuffer<GAINPUT_TEXT_INPUT_QUEUE_LENGTH, char> textBuffer_;
+	wchar_t textBuffer_[GAINPUT_TEXT_INPUT_QUEUE_LENGTH];
+	uint32_t textCount_;
 	HashMap<unsigned, DeviceButtonId> dialect_;
 	InputState* state_;
 	InputState* previousState_;
@@ -251,5 +243,6 @@ private:
 
 }
 
+#endif
 #endif
 

@@ -34,12 +34,12 @@ public:
 	bool pausePressed_;
 
 private:
-	InputManager& manager_;
+	InputManager& manager_ __unused;
 	InputDevice& device_;
-	unsigned index_;
-	bool padFound_;
+	unsigned index_ __unused;
+	bool padFound_ __unused;
 	InputState& state_;
-	InputState& previousState_;
+	InputState& previousState_ __unused;
 	InputDevice::DeviceState deviceState_;
 
 	void* motionManager_;

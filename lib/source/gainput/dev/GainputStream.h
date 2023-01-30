@@ -1,15 +1,18 @@
 #ifndef GAINPUTSTREAM_H_
 #define GAINPUTSTREAM_H_
 
-#if defined(GAINPUT_PLATFORM_LINUX) || defined(GAINPUT_PLATFORM_ANDROID)
+#if defined(GAINPUT_PLATFORM_LINUX) || defined(GAINPUT_PLATFORM_ANDROID) || defined(GAINPUT_PLATFORM_QUEST) || defined(GAINPUT_PLATFORM_GGP) || defined(GAINPUT_PLATFORM_ORBIS)
 #include <arpa/inet.h>
 #include <stdint.h>
-#elif defined(GAINPUT_PLATFORM_WIN)
+#elif defined(GAINPUT_PLATFORM_WIN) || defined(GAINPUT_PLATFORM_XBOX_ONE)
 #include <Winsock2.h>
 typedef unsigned __int16 uint16_t;
 typedef __int16 int16_t;
 typedef unsigned __int32 uint32_t;
 typedef __int32 int32_t;
+#elif defined(GAINPUT_PLATFORM_NX64)
+#include <stdint.h>
+#include <arpa/inet.h>
 #endif
 
 namespace gainput {
