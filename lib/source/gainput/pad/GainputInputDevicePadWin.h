@@ -7,7 +7,10 @@
 #include "../GainputWindows.h"
 #include "GainputInputDevicePadImpl.h"
 #include "GainputInputDevicePadWinDirectInput.h"
+#include "../hid/timer/GainputTimer.h"
+
 #include <XInput.h>
+#include <chrono>
 
 namespace gainput
 {

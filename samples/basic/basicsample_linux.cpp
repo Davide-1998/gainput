@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 	for (;;)
 	{
 		// Update Gainput
-		manager.Update();
+		manager.Update(0.0f);
 
 		XEvent event;
 		while (XPending(xDisplay))

@@ -11,15 +11,21 @@ Gainput is the awesome C++ input library for your game:
 - [complete list of features](#features)
 - [API documentation](http://gainput.johanneskuhlmann.de/api/)
 
-
 2023 fork of [@jochumdev](https://github.com/jochumdev)
 -------------------------------------------------------
 
 - Include the changes from [The-Forge](https://github.com/ConfettiFX/The-Forge/tree/master/Common_3/ThirdParty/OpenSource/gainput)
-	* Adds support for HID Devices most notably PS4 and PS5 controllers, this *should* work on Linux, all other's platforms need rework, it work's on all plattform within in The-Forge.
+  - Adds support for HID Devices most notably PS4 and PS5 controllers, this *should* work on Linux, all other's platforms need rework, it work's on all plattform within in The-Forge.
 - Extends the CMake support
 - Switched from an internal build of HIDApi to libhidapi.
 - WIP for switching the Displaymanager on Linux (Xlib+Wayland support in the same binary).
+
+Requirements
+------------
+
+|OS|Dependency|Debug|Release|
+|:--:|:--:|:--:|:--:|
+|Ubuntu|libudev-dev <br> libusb-1.0-0-dev <br> libx11-dev|✔|✔|
 
 Usage
 -----
@@ -29,7 +35,7 @@ Usage
 
 enum Button
 {
-	ButtonConfirm
+ ButtonConfirm
 };
 
 gainput::InputManager manager;
@@ -47,17 +53,16 @@ map.MapBool(ButtonConfirm, touchId, gainput::Touch0Down);
 
 while (running)
 {
-	manager.Update();
+ manager.Update();
 
-	// May need some platform-specific message handling here
+ // May need some platform-specific message handling here
 
-	if (map.GetBoolWasDown(ButtonConfirm))
-	{
-		// Confirmed!
-	}
+ if (map.GetBoolWasDown(ButtonConfirm))
+ {
+  // Confirmed!
+ }
 }
 ```
-
 
 Features
 --------
@@ -81,7 +86,6 @@ Features
 - **Dead zones** can be set up for any float-value button.
 - **State changes**, i.e. if a button is newly down or just released, can be checked for.
 
-
 Building
 --------
 
@@ -92,18 +96,15 @@ By default, Gainput is built using [CMake](http://www.cmake.org/).
 1. Run `make`
 1. The library can be found in `lib/`, the executables in `samples/`.
 
-
 Contributing
 ------------
 
 Everyone is welcome to contribute to the library. If you find any problems, you can submit them using [GitHub's issue system](https://github.com/jkuhlmann/gainput/issues). If you want to contribute code, you should fork the project and then send a pull request.
 
-
 Dependencies
 ------------
 
 Gainput has a minimal number of external dependencies to make it as self-contained as possible. It uses the platforms' default ways of getting inputs and doesn't use the STL.
-
 
 Testing
 -------
@@ -112,10 +113,8 @@ Generally, testing should be done by building and running Gainput on all support
 
 The unit tests in the `test/` folder are built by the normal CMake build. The executable can be found in the `test/` folder. All build configurations and unit tests are built and run by Travis CI whenever something is pushed into the repository.
 
-
 Alternatives
 ------------
 
 - [OIS](https://github.com/wgois/Object-oriented-Input-System--OIS-)
 - [SDL](http://www.libsdl.org/)
-
