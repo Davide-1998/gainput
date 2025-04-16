@@ -23,7 +23,7 @@
 */
 
 #include "GainputHIDWhitelist.h"
-#include "../../hidapi/hidapi.h"
+#include <hidapi.h>
 
 #include <algorithm>
 

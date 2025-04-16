@@ -13,9 +13,9 @@ else()
 	add_executable(syncsample WIN32 ${sources} ${sfwsources})
 endif()
 
-target_link_libraries(syncsample gainputstatic)
+target_link_libraries(syncsample gainput::gainput)
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(LINUX)
 	target_link_libraries(syncsample X11 GL rt)
 elseif(WIN32)
 	target_link_libraries(syncsample ${XINPUT} ws2_32)

@@ -1,6 +1,6 @@
 //
 //  GainputMac.h
-//  gainputstatic
+//  gainput
 //
 //  Created by Toto on 9/7/18.
 //
