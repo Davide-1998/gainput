@@ -6,10 +6,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-// Logging Includes
 #include <dbt.h>
 #include <dinput.h>
-#include <spdlog/spdlog.h>
+#include <gainput/GainputLog.h>
 
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -505,7 +504,7 @@ typedef struct LinearAllocator {
 
     inline void Free(size_t size) {
         if (offset < size) {
-            spdlog::error("offset < size");
+            GAINPUT_LOG("[ERROR]: offset < size\n");
             return;
         }
         offset -= size;
@@ -801,7 +800,7 @@ static void PrintControllerInfo(const DIDEVICEINSTANCE* pdidInstance) {
         vendor  = (UINT16)LOWORD(pdidInstance->guidProduct.Data1);
         product = (UINT16)HIWORD(pdidInstance->guidProduct.Data1);
     }
-    spdlog::info("GamePad Name: {} , GUID: {}, Product Id: {}, Vendor Id: {}", pdidInstance->tszProductName,
+    GAINPUT_LOG("[INFO]: GamePad Name: %s , GUID: %s, Product Id: %hu, Vendor Id: %hu\n", pdidInstance->tszProductName,
                  guid_string, product, vendor);
 }
 
@@ -1033,7 +1032,7 @@ class DirectInputInitializer {
         if (FAILED(init_re)) {
             _com_error err(init_re);
             LPCTSTR errMsg = err.ErrorMessage();
-            spdlog::error("CoInitialize failed in init with code {:#08x} - {}", init_re, errMsg);
+            GAINPUT_LOG("[ERROR]: CoInitialize failed in init with code %08x - %s\n", init_re, errMsg);
             return false;
         }
         HRESULT re = CoCreateInstance(CLSID_DirectInput8, NULL, CLSCTX_INPROC_SERVER, IID_IDirectInput8,
@@ -1041,11 +1040,11 @@ class DirectInputInitializer {
         if (FAILED(re)) {
             _com_error err(re);
             LPCTSTR errMsg = err.ErrorMessage();
-            spdlog::error("CoCreateInstance failed for gamePad {:#08x} - {}", re, errMsg);
+            GAINPUT_LOG("[ERROR]: CoCreateInstance failed for gamePad %08x - %s\n", re, errMsg);
             return false;
         }
         if (!gamePads.dinput) {
-            spdlog::error("gamePads.dinput is null");
+            GAINPUT_LOG("[ERROR]: gamePads.dinput is null\n");
             return false;
         }
         // initialize
@@ -1210,7 +1209,7 @@ class GainputInputDirectInputPadWin {
 
                         result = GetRawInputDeviceInfo(raw.header.hDevice, RIDI_DEVICENAME, NULL, &bufferSize);
                         if (result != 0) {
-                            spdlog::error("result!=0");
+                            GAINPUT_LOG("[ERROR]: result!=0\n");
                             allocator.Free(size);
                             return;
                         }
@@ -1219,7 +1218,7 @@ class GainputInputDirectInputPadWin {
                         gamepadInfo.name[bufferSize]     = '\0';
                         gamepadInfo.rawInputDeviceHandle = raw.header.hDevice;
                         if (result == -1) {
-                            spdlog::error("result==-1");
+                            GAINPUT_LOG("[ERROR]: result==-1\n");
                         }
                     }
                 }
@@ -1370,7 +1369,7 @@ class GainputInputDirectInputPadWin {
                                                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         }
         if (gamepadInfo.hidDevice == INVALID_HANDLE_VALUE) {
-            spdlog::error("gamepadInfo.hidDevice == INVALID_HANDLE_VALUE");
+            GAINPUT_LOG("[ERROR]: gamepadInfo.hidDevice == INVALID_HANDLE_VALUE\n ");
             return false;
         }
         // assert(gamepadInfo.hidDevice != INVALID_HANDLE_VALUE);
@@ -1385,11 +1384,11 @@ class GainputInputDirectInputPadWin {
         DWORD bytes_written;
         BOOL result = WriteFile(gamepadInfo.hidDevice, buf, sizeof(buf), &bytes_written, NULL);
         if (result != TRUE) {
-            spdlog::error("result != TRUE");
+            GAINPUT_LOG("[ERROR]: result != TRUE\n");
             return false;
         }
         if (bytes_written != ARRAYSIZE(buf)) {
-            spdlog::error("bytes_written != ARRAYSIZE(buf)");
+            GAINPUT_LOG("[ERROR]: bytes_written != ARRAYSIZE(buf)\n");
             return false;
         }
         return result;
@@ -1401,7 +1400,7 @@ class GainputInputDirectInputPadWin {
                                                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
         }
         if (gamepadInfo.hidDevice == INVALID_HANDLE_VALUE) {
-            spdlog::error("gamepadInfo.hidDevice == INVALID_HANDLE_VALUE");
+            GAINPUT_LOG("[ERROR]: gamepadInfo.hidDevice == INVALID_HANDLE_VALUE\n");
             return false;
         }
         // assert(gamepadInfo.hidDevice != INVALID_HANDLE_VALUE);
@@ -1419,11 +1418,11 @@ class GainputInputDirectInputPadWin {
         DWORD bytes_written;
         BOOL result = WriteFile(gamepadInfo.hidDevice, buf, sizeof(buf), &bytes_written, NULL);
         if (result != TRUE) {
-            spdlog::error("result != TRUE");
+            GAINPUT_LOG("[ERROR]: result != TRUE\n");
             return false;
         }
         if (bytes_written != ARRAYSIZE(buf)) {
-            spdlog::error("bytes_written != ARRAYSIZE(buf)");
+            GAINPUT_LOG("[ERROR]: bytes_written != ARRAYSIZE(buf)\n");
             return false;
         }
         return result;

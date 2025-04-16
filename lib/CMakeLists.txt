@@ -106,20 +106,13 @@ elseif("${GAINPUT_TARGET_PLATFORM}" MATCHES "PROSPERO")
   )
 endif()
 
-add_library(${PROJECT_NAME} ${GAINPUT_FILES} ${GAINPUT_HEADER_EXPORT_FILE})
+add_library(${PROJECT_NAME} ${GAINPUT_FILES})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-
-set(GAINPUT_HEADER_EXPORT_FILE ${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}/export.hpp)
-generate_export_header(
-  ${PROJECT_NAME} EXPORT_FILE_NAME ${GAINPUT_HEADER_EXPORT_FILE} INCLUDE_GUARD_NAME
-  ${PROJECT_NAME}_EXPORT_HPP_
-)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 target_link_libraries(${PROJECT_NAME} 
-  PRIVATE spdlog::spdlog
-          $<$<BOOL:${GAINPUT_ENABLE_HID}>:hidapi::hidapi>
+  PRIVATE $<$<BOOL:${GAINPUT_ENABLE_HID}>:hidapi::hidapi>
           $<$<BOOL:${WIN32}>:winmm.lib> #Needed otherwise timeGetTime has no reference
           $<$<BOOL:${LINUX}>:X11> # Needed oterhwise XkbKeycodeToKeysym gets missing reference
 )
