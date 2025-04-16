@@ -6,10 +6,10 @@ set(SYNCSAMPLE_SOURCES
 )
 
 set(FW_SOURCES
-	"${CMAKE_SOURCE_DIR}/samples/samplefw/SampleFramework.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../samplefw/SampleFramework.cpp"
 )
 set(FW_HEADERS
-	"${CMAKE_SOURCE_DIR}/samples/samplefw/SampleFramework.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../samplefw/SampleFramework.h"
 )
 
 if(ANDROID)
@@ -28,5 +28,5 @@ elseif(APPLE)
 	target_link_libraries(${PROJECT_NAME} ${FOUNDATION} ${IOKIT} ${APPKIT})
 endif()
 
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/lib/include/")
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/samples/samplefw/")
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../lib/include/")
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../samplefw/")
