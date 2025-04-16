@@ -139,7 +139,7 @@ void SampleMain()
 
 	gainput::TrackingAllocator allocator(gainput::GetDefaultAllocator());
 
-	gainput::InputManager manager(true, allocator);
+	gainput::InputManager manager(allocator);
 
 	const gainput::DeviceId keyboardId = manager.CreateDevice<gainput::InputDeviceKeyboard>();
 	const gainput::DeviceId mouseId = manager.CreateDevice<gainput::InputDeviceMouse>();
@@ -226,7 +226,7 @@ void SampleMain()
 
 	while (!SfwIsDone() && !doExit)
 	{
-		manager.Update();
+		manager.Update(0.0f);
 
 #if defined(GAINPUT_PLATFORM_LINUX)
 		XEvent event;

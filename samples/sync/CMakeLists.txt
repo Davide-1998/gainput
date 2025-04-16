@@ -1,24 +1,32 @@
 
 project(syncsample)
 
-include_directories(../../lib/include/)
-include_directories(../samplefw/)
+set(SYNCSAMPLE_SOURCES
+	"${CMAKE_CURRENT_SOURCE_DIR}/syncsample.cpp"
+)
 
-file(GLOB_RECURSE sources *.cpp)
-file(GLOB_RECURSE sfwsources ../samplefw/*.cpp)
+set(FW_SOURCES
+	"${CMAKE_SOURCE_DIR}/samples/samplefw/SampleFramework.cpp"
+)
+set(FW_HEADERS
+	"${CMAKE_SOURCE_DIR}/samples/samplefw/SampleFramework.h"
+)
 
 if(ANDROID)
-	add_library(syncsample SHARED ${sources} ${sfwsources})
+	add_library(${PROJECT_NAME} SHARED ${SYNCSAMPLE_SOURCES} ${FW_SOURCES} ${FW_HEADERS})
 else()
-	add_executable(syncsample WIN32 ${sources} ${sfwsources})
+	add_executable(${PROJECT_NAME} WIN32 ${SYNCSAMPLE_SOURCES} ${FW_SOURCES} ${FW_HEADERS})
 endif()
 
-target_link_libraries(syncsample gainput::gainput)
+target_link_libraries(${PROJECT_NAME} gainput::gainput)
 
 if(LINUX)
-	target_link_libraries(syncsample X11 GL rt)
+	target_link_libraries(${PROJECT_NAME} X11 GL rt)
 elseif(WIN32)
-	target_link_libraries(syncsample ${XINPUT} ws2_32)
+	target_link_libraries(${PROJECT_NAME} ${XINPUT} ws2_32)
 elseif(APPLE)
-	target_link_libraries(syncsample ${FOUNDATION} ${IOKIT} ${APPKIT})
+	target_link_libraries(${PROJECT_NAME} ${FOUNDATION} ${IOKIT} ${APPKIT})
 endif()
+
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/lib/include/")
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/samples/samplefw/")
