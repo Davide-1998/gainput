@@ -1,5 +1,4 @@
-Gainput [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-=======
+# Gainput [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Gainput is the awesome C++ input library for your game:
 
@@ -9,26 +8,23 @@ Gainput is the awesome C++ input library for your game:
 - supported devices: keyboard, mouse, gamepad, multi-touch, device built-in sensors
 - [Open Source (MIT license)](https://github.com/jkuhlmann/gainput/blob/master/LICENSE)
 - [complete list of features](#features)
-- [API documentation](http://gainput.johanneskuhlmann.de/api/)
+- [API documentation](http://gainput.johanneskuhlmann.de/api)
 
-2023 fork of [@jochumdev](https://github.com/jochumdev)
--------------------------------------------------------
+## 2023 fork of [@jochumdev](https://github.com/jochumdev)
 
 - Include the changes from [The-Forge](https://github.com/ConfettiFX/The-Forge/tree/master/Common_3/ThirdParty/OpenSource/gainput)
-  - Adds support for HID Devices most notably PS4 and PS5 controllers, this *should* work on Linux, all other's platforms need rework, it work's on all plattform within in The-Forge.
+  - Adds support for HID Devices most notably PS4 and PS5 controllers, this _should_ work on Linux, all other's platforms need rework, it work's on all plattform within in The-Forge.
 - Extends the CMake support
 - Switched from an internal build of HIDApi to libhidapi.
 - WIP for switching the Displaymanager on Linux (Xlib+Wayland support in the same binary).
 
-Requirements
-------------
+## Requirements
 
-|OS|Dependency|Debug|Release|
-|:--:|:--:|:--:|:--:|
-|Ubuntu|libudev-dev <br> libusb-1.0-0-dev <br> libx11-dev|✔|✔|
+|    OS    |                       Dependency                        |       Debug        |      Release       |
+| :------: | :-----------------------------------------------------: | :----------------: | :----------------: |
+| _Ubuntu_ | `libudev-dev` <br> `libusb-1.0-0-dev` <br> `libx11-dev` | :heavy_check_mark: | :heavy_check_mark: |
 
-Usage
------
+## Usage
 
 ```cpp
 #include <gainput/gainput.h>
@@ -53,7 +49,7 @@ map.MapBool(ButtonConfirm, touchId, gainput::Touch0Down);
 
 while (running)
 {
- manager.Update();
+ manager.Update(0.0f);
 
  // May need some platform-specific message handling here
 
@@ -64,8 +60,7 @@ while (running)
 }
 ```
 
-Features
---------
+## Features
 
 - Offers a **unified interface** on all supported platforms. (Some minor changes are necessary to setup the library.)
 - Provides a low-level and high-level interface: Query the state of input devices buttons directly or map device buttons to a user button. That way it's easy to support alternative inputs or change the **input mappings** around later.
@@ -86,35 +81,30 @@ Features
 - **Dead zones** can be set up for any float-value button.
 - **State changes**, i.e. if a button is newly down or just released, can be checked for.
 
-Building
---------
+## Building
 
-By default, Gainput is built using [CMake](http://www.cmake.org/).
+By default, Gainput is built using [CMake](http://www.cmake.org).
 
 1. Run `mkdir build`
 1. Run `cmake ..`
 1. Run `make`
 1. The library can be found in `lib/`, the executables in `samples/`.
 
-Contributing
-------------
+## Contributing
 
 Everyone is welcome to contribute to the library. If you find any problems, you can submit them using [GitHub's issue system](https://github.com/jkuhlmann/gainput/issues). If you want to contribute code, you should fork the project and then send a pull request.
 
-Dependencies
-------------
+## Dependencies
 
 Gainput has a minimal number of external dependencies to make it as self-contained as possible. It uses the platforms' default ways of getting inputs and doesn't use the STL.
 
-Testing
--------
+## Testing
 
 Generally, testing should be done by building and running Gainput on all supported platforms. The samples in the `samples/` folder should be used in order to determine if the library is functional.
 
 The unit tests in the `test/` folder are built by the normal CMake build. The executable can be found in the `test/` folder. All build configurations and unit tests are built and run by Travis CI whenever something is pushed into the repository.
 
-Alternatives
-------------
+## Alternatives
 
 - [OIS](https://github.com/wgois/Object-oriented-Input-System--OIS-)
-- [SDL](http://www.libsdl.org/)
+- [SDL](http://www.libsdl.org)
