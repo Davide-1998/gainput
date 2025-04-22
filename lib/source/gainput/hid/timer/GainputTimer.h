@@ -67,10 +67,9 @@ uint32_t	getTimerMSec(Timer* pTimer, bool reset);
 
 typedef struct HiresTimer
 {
-	int64_t		mStartTime;
-
-	int64_t		mHistory[HIRES_TIMER_LENGTH_OF_HISTORY];
-	uint32_t	mHistoryIndex;
+	int64_t		mStartTime = 0;
+	int64_t		mHistory[HIRES_TIMER_LENGTH_OF_HISTORY] = {};
+	uint32_t	mHistoryIndex = 0;
 }HiresTimer;
 
 void		initHiresTimer(HiresTimer* pTimer);

@@ -1,21 +1,55 @@
-cmake_minimum_required(VERSION 3.16.0)
+#
+# CMake requirements
+#
+# CMake 3.25 required due to variables like LINUX being available since then
+cmake_minimum_required(VERSION 3.25.0 FATAL_ERROR)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+#
+# Project Definition
+#
+project(gainput
+	VERSION 2.1.0
+	LANGUAGES CXX
+	DESCRIPTION "C++ gaming input library"
+)
 
-project(gainput)
+#
+# Project settings
+#
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_DEBUG_POSTFIX d)
 
-set(GAINPUT_MAJOR_VERSION 2)
-set(GAINPUT_MINOR_VERSION 0)
-set(GAINPUT_PATCH_VERSION 0)
-set(GAINPUT_VERSION ${GAINPUT_MAJOR_VERSION}.${GAINPUT_MINOR_VERSION}.${GAINPUT_PATCH_VERSION})
+#
+# CMake functionalities includes
+#
+include(CMakeDependentOption)
 
+#
+# Project variables
+#
 set(GAINPUT_TARGET_PLATFORM "${CMAKE_SYSTEM_NAME}" CACHE STRING "Platform to build gainput for (QuestVR,Linux,Android,Windows,Darwin,TVOS,iOS,NX64,ORBIS,PROSPERO")
 
-option(GAINPUT_SAMPLES "Build Samples for Gainput" OFF)
-option(GAINPUT_TESTS "Build Tests for Gainput" OFF)
-option(GAINPUT_BUILD_STATIC "Build as static library" ON)
-option(GAINPUT_ENABLE_IOS_HAPTICS "enable haptics on iOS" ON)
-option(GAINPUT_ENABLE_HID "enable HID support (cmake port works only with Linux atm)" OFF)
+option(BUILD_SHARED_LIBS "Build as shared lib" OFF)
+option(GAINPUT_SAMPLES "Build Samples for Gainput" ON)
+option(GAINPUT_TESTS "Build Tests for Gainput" ${PROJECT_IS_TOP_LEVEL})
+cmake_dependent_option(GAINPUT_ENABLE_HID "Enable HID support (cmake port works only with Linux atm)" ON "NOT WIN32" ON)
+cmake_dependent_option(GAINPUT_ENABLE_IOS_HAPTICS "Enable haptics on iOS" ON "APPLE OR DARWIN" OFF)
+
+#
+# Dependencies
+#
+include(FetchContent)
+if(GAINPUT_ENABLE_HID)
+	FetchContent_Declare(
+		hidapi
+		GIT_REPOSITORY https://github.com/libusb/hidapi.git
+		GIT_TAG hidapi-0.14.0
+		SYSTEM
+	)
+	FetchContent_MakeAvailable(hidapi)
+endif()
 
 if(!WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
@@ -32,7 +66,7 @@ if(ANDROID)
 endif()
 
 # Dumb options
-set(_DUMB_VARS "GAINPUT_TARGET_PLATFORM;GAINPUT_SAMPLES;GAINPUT_TESTS;GAINPUT_BUILD_STATIC;GAINPUT_ENABLE_HID")
+set(_DUMB_VARS "GAINPUT_TARGET_PLATFORM;GAINPUT_SAMPLES;GAINPUT_TESTS;GAINPUT_ENABLE_HID")
 
 message("")
 message(STATUS "The following options have been set:")

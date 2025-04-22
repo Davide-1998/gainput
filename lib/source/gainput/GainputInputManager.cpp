@@ -2,6 +2,7 @@
 
 #include "gainput/gainput.h"
 #include "gainput/GainputInputDeltaState.h"
+#include "hid/GainputHID.h"
 
 #if defined(GAINPUT_PLATFORM_LINUX)
 	#include <time.h>

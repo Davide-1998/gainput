@@ -167,9 +167,9 @@ typedef unsigned int DeviceButtonId;
 struct DeviceButtonSpec
 {
 	/// ID of the input device.
-	DeviceId deviceId;
+	DeviceId deviceId = 0;
 	/// ID of the button on the given input device.
-	DeviceButtonId buttonId;
+	DeviceButtonId buttonId = 0;
 };
 
 /// ID of a user-defined, mapped button.

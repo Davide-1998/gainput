@@ -150,6 +150,13 @@ public:
 	const char* GetDeviceName();
 	bool SetRumbleEffect(float left_motor, float right_motor, uint32_t duration_ms, bool targetOwningDevice = false);
 	void SetLEDColor(uint8_t r, uint8_t g, uint8_t b);
+
+	/**
+	 * @brief Set the callback function that will execute when the device will be [dis]connected
+	 * 
+	 * @param onDeviceChange Callback function pointer. Input parameters are name of the device,
+	 * flag telling whether it has been added or not, index of the device
+	 */
 	void SetOnDeviceChangeCallBack(void(*onDeviceChange)(const char*, bool added, int controllerID));
 
 protected:

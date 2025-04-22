@@ -40,7 +40,7 @@ void resetTimer(Timer* pTimer) { pTimer->mStartTime = getSystemTime(); }
 
 void initHiresTimer(HiresTimer* pTimer)
 {
-	*pTimer = (HiresTimer){ 0 };
+	*pTimer = HiresTimer();
 	resetHiresTimer(pTimer);
 }
 
