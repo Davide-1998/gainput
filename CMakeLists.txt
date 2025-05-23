@@ -45,7 +45,7 @@ if(GAINPUT_ENABLE_HID)
 	FetchContent_Declare(
 		hidapi
 		GIT_REPOSITORY https://github.com/libusb/hidapi.git
-		GIT_TAG hidapi-0.14.0
+		GIT_TAG hidapi-0.15.0
 		SYSTEM
 	)
 	FetchContent_MakeAvailable(hidapi)
